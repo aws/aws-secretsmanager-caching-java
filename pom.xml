@@ -3,12 +3,12 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.amazonaws.secretsmanager</groupId>
-    <artifactId>aws-secretsmanager-caching-client-java</artifactId>
+    <artifactId>aws-secretsmanager-caching-java</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
 
-    <name>aws-secretsmanager-caching-client-java</name>
+    <name>aws-secretsmanager-caching-java</name>
     <description>AWS Secrets Manager caching client for Java</description>
     <url>https://github.com/aws/aws-secretsmanager-caching-java</url>
 
@@ -32,7 +32,7 @@
     </developers>
 
     <scm>
-        <url>https://github.com/aws/aws-secretsmanager-caching-client-java.git</url>
+        <url>https://github.com/aws/aws-secretsmanager-caching-java.git</url>
     </scm>
 
     <properties>
