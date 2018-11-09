@@ -11,7 +11,7 @@ To use this client you must have:
 
   If you do not have one, go to [Java SE Downloads](https://www.oracle.com/technetwork/java/javase/downloads/index.html) on the Oracle website, then download and install the Java SE Development Kit (JDK). Java 8 or higher is recommended.
 
-You must have an Amazon Web Services (AWS) account to access secrets stored in AWS Secrets Manager and use AWS SDK for Java.
+An Amazon Web Services (AWS) account to access secrets stored in AWS Secrets Manager and use AWS SDK for Java.
 
 * **To create an AWS account**, go to [Sign In or Create an AWS Account](https://portal.aws.amazon.com/gp/aws/developer/registration/index.html) and then choose **I am a new user.** Follow the instructions to create an AWS account.
 
@@ -25,8 +25,8 @@ You can get the latest release from Maven:
 
 ```xml
 <dependency>
-  <groupId>com.amazonaws</groupId>
-  <artifactId>aws-secretsmanager-caching-client-java</artifactId>
+  <groupId>com.amazonaws.secretsmanager</groupId>
+  <artifactId>aws-secretsmanager-caching-java</artifactId>
   <version>1.0.0</version>
 </dependency>
 ```
