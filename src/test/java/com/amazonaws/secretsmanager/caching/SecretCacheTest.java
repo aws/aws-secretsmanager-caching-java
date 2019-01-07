@@ -270,6 +270,35 @@ public class SecretCacheTest {
     }
 
     @Test
+    public void secretCacheRefreshAfterVersionChangeTest() throws Throwable {
+        final String secret = "secretCacheRefreshAfterVersionChangeTest";
+        Map<String, List<String>> versionMap = new HashMap<String, List<String>>();
+        versionMap.put("versionId", Arrays.asList("AWSCURRENT"));
+        Mockito.when(describeSecretResult.getVersionIdsToStages()).thenReturn(versionMap);
+        getSecretValueResult.setSecretString(secret);
+        SecretCache sc = new SecretCache(new SecretCacheConfiguration()
+                .withClient(asm)
+                .withCacheItemTTL(500));
+
+        // Request the secret multiple times and verify the correct result
+        repeat(5, n -> Assert.assertEquals(sc.getSecretString(""), secret));
+
+        // Verify that multiple requests did not call the API
+        Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any());
+        Mockito.verify(asm, Mockito.times(1)).getSecretValue(Mockito.any());
+
+        // Wait long enough to expire the TTL on the cached item.
+        Thread.sleep(600);
+        versionMap.clear();
+        // Simulate a change in secret version values
+        versionMap.put("versionIdNew", Arrays.asList("AWSCURRENT"));
+        repeat(5, n -> Assert.assertEquals(sc.getSecretString(""), secret));
+        // Verify that the refresh occurred after the ttl
+        Mockito.verify(asm, Mockito.times(2)).describeSecret(Mockito.any());
+        Mockito.verify(asm, Mockito.times(2)).getSecretValue(Mockito.any());
+    }
+
+    @Test
     public void basicSecretCacheTestNoVersions() {
         final String secret = "basicSecretCacheTestNoVersion";
         getSecretValueResult.setSecretString(secret);
