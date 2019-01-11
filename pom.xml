@@ -45,9 +45,9 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-secretsmanager</artifactId>
-            <version>1.11.409</version>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>secretsmanager</artifactId>
+            <version>2.7.10</version>
         </dependency>
         <dependency>
             <groupId>org.testng</groupId>
