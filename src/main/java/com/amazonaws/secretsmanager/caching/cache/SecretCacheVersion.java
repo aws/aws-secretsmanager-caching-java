@@ -14,17 +14,18 @@
 package com.amazonaws.secretsmanager.caching.cache;
 
 import com.amazonaws.secretsmanager.caching.SecretCacheConfiguration;
-import com.amazonaws.services.secretsmanager.AWSSecretsManager;
-import com.amazonaws.services.secretsmanager.model.GetSecretValueRequest;
-import com.amazonaws.services.secretsmanager.model.GetSecretValueResult;
+import software.amazon.awssdk.services.secretsmanager.SecretsManagerAsyncClient;
+import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueRequest;
+import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueResponse;
 
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * The cached secret version item which contains information from the
  * GetSecretValue AWS Secrets Manager request.
  */
-public class SecretCacheVersion extends SecretCacheObject<GetSecretValueResult> {
+public class SecretCacheVersion extends SecretCacheObject<GetSecretValueResponse> {
 
     /** The version identifier to use when requesting the secret value. */
     private final String versionId;
@@ -48,7 +49,7 @@ public class SecretCacheVersion extends SecretCacheObject<GetSecretValueResult> 
      */
     public SecretCacheVersion(final String secretId,
                               final String versionId,
-                              final AWSSecretsManager client,
+                              final SecretsManagerAsyncClient client,
                               final SecretCacheConfiguration config) {
         super(secretId, client, config);
         this.versionId = versionId;
@@ -80,22 +81,22 @@ public class SecretCacheVersion extends SecretCacheObject<GetSecretValueResult> 
      * @return The result from AWS Secrets Manager for the refresh.
      */
     @Override
-    protected GetSecretValueResult executeRefresh() {
+    protected CompletableFuture<GetSecretValueResponse> executeRefresh() {
         return client.getSecretValue(
-                updateUserAgent(new GetSecretValueRequest()
-                        .withSecretId(this.secretId).withVersionId(this.versionId)));
+                GetSecretValueRequest.builder().
+                        secretId(this.secretId).versionId(this.versionId).build());
     }
 
     /**
      * Return the cached result from AWS Secrets Manager for GetSecretValue.
      *
-     * @param gsvResult
+     * @param gsvResponse
      *            The result of the Get Secret Value request to AWS Secrets Manager.
      * @return The cached GetSecretValue result.
      */
     @Override
-    protected GetSecretValueResult getSecretValue(GetSecretValueResult gsvResult) {
-        return gsvResult;
+    protected GetSecretValueResponse getSecretValue(GetSecretValueResponse gsvResponse) {
+        return gsvResponse;
     }
 
 }
