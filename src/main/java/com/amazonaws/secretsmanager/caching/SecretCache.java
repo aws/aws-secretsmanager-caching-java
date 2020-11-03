@@ -14,11 +14,14 @@ package com.amazonaws.secretsmanager.caching;
 
 import com.amazonaws.secretsmanager.caching.cache.LRUCache;
 import com.amazonaws.secretsmanager.caching.cache.SecretCacheItem;
-import com.amazonaws.services.secretsmanager.AWSSecretsManager;
-import com.amazonaws.services.secretsmanager.AWSSecretsManagerClientBuilder;
-import com.amazonaws.services.secretsmanager.model.GetSecretValueResult;
+import com.amazonaws.secretsmanager.caching.cache.internal.VersionInfo;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
+import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
+import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
+import software.amazon.awssdk.services.secretsmanager.SecretsManagerClientBuilder;
+import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueResponse;
 
-import java.nio.ByteBuffer;
 
 /**
  * Provides the primary entry-point to the AWS Secrets Manager client cache SDK.
@@ -47,13 +50,13 @@ public class SecretCache implements AutoCloseable {
     private final SecretCacheConfiguration config;
 
     /** The AWS Secrets Manager client to use when requesting secrets. */
-    private final AWSSecretsManager client;
+    private final SecretsManagerClient client;
 
     /**
      * Constructs a new secret cache using the standard AWS Secrets Manager client with default options.
      */
     public SecretCache() {
-        this(AWSSecretsManagerClientBuilder.standard());
+        this(createDefaultClient());
     }
 
 
@@ -64,9 +67,9 @@ public class SecretCache implements AutoCloseable {
      * @param builder
      *        The builder to use for creating the AWS Secrets Manager client.
      */
-    public SecretCache(AWSSecretsManagerClientBuilder builder) {
+    public SecretCache(SecretsManagerClientBuilder builder) {
         this(null == builder ?
-                AWSSecretsManagerClientBuilder.standard().build() :
+                createDefaultClient() :
                 builder.build());
     }
 
@@ -76,7 +79,7 @@ public class SecretCache implements AutoCloseable {
      * @param client
      *        The AWS Secrets Manager client to use for requesting secret values.
      */
-    public SecretCache(AWSSecretsManager client) {
+    public SecretCache(SecretsManagerClient client) {
         this(new SecretCacheConfiguration().withClient(client));
     }
 
@@ -91,7 +94,7 @@ public class SecretCache implements AutoCloseable {
         this.cache = new LRUCache<String, SecretCacheItem>(config.getMaxCacheSize());
         this.config = config;
         this.client = config.getClient() != null ? config.getClient() :
-                AWSSecretsManagerClientBuilder.standard().build();
+                SecretsManagerClient.create();
     }
 
     /**
@@ -120,9 +123,9 @@ public class SecretCache implements AutoCloseable {
      */
     public String getSecretString(final String secretId) {
         SecretCacheItem secret = this.getCachedSecret(secretId);
-        GetSecretValueResult gsv = secret.getSecretValue();
+        GetSecretValueResponse gsv = secret.getSecretValue();
         if (null == gsv) { return null; }
-        return gsv.getSecretString();
+        return gsv.secretString();
     }
 
     /**
@@ -132,11 +135,11 @@ public class SecretCache implements AutoCloseable {
      *        The identifier for the secret being requested.
      * @return The binary secret
      */
-    public ByteBuffer getSecretBinary(final String secretId) {
+    public SdkBytes getSecretBinary(final String secretId) {
         SecretCacheItem secret = this.getCachedSecret(secretId);
-        GetSecretValueResult gsv = secret.getSecretValue();
+        GetSecretValueResponse gsv = secret.getSecretValue();
         if (null == gsv) { return null; }
-        return gsv.getSecretBinary();
+        return gsv.secretBinary();
     }
 
     /**
@@ -161,4 +164,11 @@ public class SecretCache implements AutoCloseable {
         this.cache.clear();
     }
 
+    private static SecretsManagerClient createDefaultClient() {
+        ClientOverrideConfiguration config = ClientOverrideConfiguration.builder()
+                .putAdvancedOption(SdkAdvancedClientOption.USER_AGENT_PREFIX, VersionInfo.USER_AGENT)
+                .putAdvancedOption(SdkAdvancedClientOption.USER_AGENT_SUFFIX, "")
+                .build();
+        return SecretsManagerClient.builder().overrideConfiguration(config).build();
+    }
 }

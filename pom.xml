@@ -4,7 +4,7 @@
 
     <groupId>com.amazonaws.secretsmanager</groupId>
     <artifactId>aws-secretsmanager-caching-java</artifactId>
-    <version>1.0.1</version>
+    <version>2.0.1</version>
     <packaging>jar</packaging>
 
 
@@ -39,15 +39,26 @@
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <checkstyle.plugin.version>3.0.0</checkstyle.plugin.version>
+        <checkstyle.plugin.version>3.1.1</checkstyle.plugin.version>
         <findbugs.plugin.version>3.0.4</findbugs.plugin.version>
+        <aws-java-sdk.version>2.15.19</aws-java-sdk.version>
     </properties>
 
     <dependencies>
         <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-secretsmanager</artifactId>
-            <version>1.11.409</version>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>secretsmanager</artifactId>
+            <version>${aws-java-sdk.version}</version>
+        </dependency>
+        <dependency>
+            <!--
+            Have STS in classpath for using WebIdentityTokenFileCredentialsProvider as part of
+            default credentials chain when running in EKS.
+            https://github.com/aws/aws-sdk-java-v2/issues/1470#issuecomment-616269054
+            -->
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>sts</artifactId>
+            <version>${aws-java-sdk.version}</version>
         </dependency>
         <dependency>
             <groupId>org.testng</groupId>
@@ -57,10 +68,17 @@
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
-            <artifactId>mockito-all</artifactId>
-            <version>1.10.19</version>
+            <artifactId>mockito-core</artifactId>
+            <version>3.6.0</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-inline</artifactId>
+            <version>3.6.0</version>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
     <build>
         <plugins>

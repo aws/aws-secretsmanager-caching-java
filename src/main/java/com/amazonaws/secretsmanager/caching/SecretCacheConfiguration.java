@@ -13,7 +13,9 @@
 
 package com.amazonaws.secretsmanager.caching;
 
-import com.amazonaws.services.secretsmanager.AWSSecretsManager;
+
+
+import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 
 import java.util.concurrent.TimeUnit;
 
@@ -34,7 +36,7 @@ public class SecretCacheConfiguration {
     public static final String DEFAULT_VERSION_STAGE = "AWSCURRENT";
 
     /** The client this cache instance will use for accessing AWS Secrets Manager. */
-    private AWSSecretsManager client = null;
+    private SecretsManagerClient client = null;
 
     /** Used to hook in-memory cache updates. */
     private SecretCacheHook cacheHook = null;
@@ -71,7 +73,7 @@ public class SecretCacheConfiguration {
      *
      * @return The AWS Secrets Manager client.
      */
-    public AWSSecretsManager getClient() {
+    public SecretsManagerClient getClient() {
         return client;
     }
 
@@ -83,7 +85,7 @@ public class SecretCacheConfiguration {
      * @param client
      *            The AWS Secrets Manager client.
      */
-    public void setClient(AWSSecretsManager client) {
+    public void setClient(SecretsManagerClient client) {
         this.client = client;
     }
 
@@ -95,7 +97,7 @@ public class SecretCacheConfiguration {
      *            The AWS Secrets Manager client.
      * @return The updated ClientConfiguration object with the new client setting.
      */
-    public SecretCacheConfiguration withClient(AWSSecretsManager client) {
+    public SecretCacheConfiguration withClient(SecretsManagerClient client) {
         this.setClient(client);
         return this;
     }

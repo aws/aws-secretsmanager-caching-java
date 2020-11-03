@@ -13,15 +13,10 @@
 
 package com.amazonaws.secretsmanager.caching.cache;
 
-import com.amazonaws.AmazonWebServiceRequest;
-import com.amazonaws.services.secretsmanager.AWSSecretsManager;
-import com.amazonaws.services.secretsmanager.model.GetSecretValueResult;
-import com.amazonaws.secretsmanager.caching.cache.internal.VersionInfo;
+import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 import com.amazonaws.secretsmanager.caching.SecretCacheConfiguration;
+import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueResponse;
 
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -55,7 +50,7 @@ public abstract class SecretCacheObject<T> {
     protected final Object lock = new Object();
 
     /** The AWS Secrets Manager client to use for requesting secrets. */
-    protected final AWSSecretsManager client;
+    protected final SecretsManagerClient client;
 
     /** The Secret Cache Configuration. */
     protected final SecretCacheConfiguration config;
@@ -97,7 +92,7 @@ public abstract class SecretCacheObject<T> {
      *            The secret cache configuration.
      */
     public SecretCacheObject(final String secretId,
-                             final AWSSecretsManager client,
+                             final SecretsManagerClient client,
                              final SecretCacheConfiguration config) {
         this.secretId = secretId;
         this.client = client;
@@ -119,16 +114,12 @@ public abstract class SecretCacheObject<T> {
      * @return The cached GetSecretValue result based on the current
      *         cached state.
      */
-    protected abstract GetSecretValueResult getSecretValue(T result);
+    protected abstract GetSecretValueResponse getSecretValue(T result);
 
     public abstract boolean equals(Object obj);
     public abstract int hashCode();
     public abstract String toString();
 
-    protected <T extends AmazonWebServiceRequest> T updateUserAgent(T request) {
-        request.getRequestClientOptions().appendUserAgent(VersionInfo.USER_AGENT);
-        return request;
-    }
 
     /**
      * Return the typed result object
@@ -207,41 +198,7 @@ public abstract class SecretCacheObject<T> {
         }
     }
 
-    /**
-     * Method to clone a List of String
-     *
-     * @param l
-     *        The List of String
-     * @return The cloned List of String.
-     */
-    private List<String> clone(List<String> l) {
-        if (null == l) { return null; }
-        return new ArrayList<>(l);
-    }
 
-    /**
-     * Method to clone a ByteBuffer
-     *
-     * @param b
-     *        The ByteBuffer to be cloned.
-     * @return The cloned ByteBuffer.
-     */
-    private ByteBuffer clone(ByteBuffer b) {
-        // Nothing to clone, return null.
-        if (null == b) { return null; }
-        b.rewind();
-        ByteBuffer clone = ByteBuffer.allocate(b.remaining());
-
-        if (b.hasArray()) {
-            System.arraycopy(b.array(), 0, clone.array(), 0, b.remaining());
-        }
-        else {
-            clone.put(b.duplicate());
-            clone.flip();
-        }
-
-        return clone;
-    }
 
     /**
      * Method to force the refresh of a cached secret state.
@@ -281,24 +238,17 @@ public abstract class SecretCacheObject<T> {
      *
      * @return The cached GetSecretValue result.
      */
-    public GetSecretValueResult getSecretValue() {
+    public GetSecretValueResponse getSecretValue() {
         synchronized (lock) {
             refresh();
             if (null == this.data) {
                 if (null != this.exception) { throw this.exception; }
             }
-            GetSecretValueResult gsv = this.getSecretValue(this.getResult());
+            GetSecretValueResponse gsv = this.getSecretValue(this.getResult());
 
             // If there is no cached result, return null.
             if (null == gsv) { return null; }
 
-            // We want to clone the result to prevent callers from modifying
-            // the cached data.
-            gsv = gsv.clone();
-            // The prior clone did not perform a deep clone of all objects.
-            // Handle cloning the byte buffer it one exists.
-            gsv.setSecretBinary(clone(gsv.getSecretBinary()));
-            gsv.setVersionStages(clone(gsv.getVersionStages()));
             return gsv;
         }
     }

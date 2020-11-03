@@ -13,19 +13,21 @@
 
 package com.amazonaws.secretsmanager.caching;
 
-import com.amazonaws.services.secretsmanager.AWSSecretsManager;
-import com.amazonaws.services.secretsmanager.AWSSecretsManagerClientBuilder;
-import com.amazonaws.services.secretsmanager.model.DescribeSecretResult;
-import com.amazonaws.services.secretsmanager.model.GetSecretValueResult;
-import com.amazonaws.SdkClientException;
 
-import org.testng.annotations.Test;
-import org.testng.annotations.BeforeMethod;
-import org.testng.Assert;
-
-import org.mockito.MockitoAnnotations;
-import org.mockito.Mockito;
 import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
+import org.testng.Assert;
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Test;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
+import software.amazon.awssdk.services.secretsmanager.SecretsManagerClientBuilder;
+import software.amazon.awssdk.services.secretsmanager.model.DescribeSecretRequest;
+import software.amazon.awssdk.services.secretsmanager.model.DescribeSecretResponse;
+import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueRequest;
+import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueResponse;
+import software.amazon.awssdk.services.secretsmanager.model.SecretsManagerException;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -40,22 +42,30 @@ import java.util.function.IntConsumer;
 public class SecretCacheTest {
 
     @Mock
-    private AWSSecretsManager asm;
+    private SecretsManagerClient asm;
 
     @Mock
-    private DescribeSecretResult describeSecretResult;
+    private DescribeSecretResponse describeSecretResult;
 
-    private GetSecretValueResult getSecretValueResult = new GetSecretValueResult();
+    private GetSecretValueResponse getSecretValueResult = GetSecretValueResponse.builder().build();
 
     @Mock
     private SecretCacheConfiguration secretCacheConfiguration;
 
     @BeforeMethod
     public void setUp() {
-        getSecretValueResult = new GetSecretValueResult().withVersionStages(Arrays.asList("v1"));
-        MockitoAnnotations.initMocks(this);
-        Mockito.when(asm.describeSecret(Mockito.any())).thenReturn(describeSecretResult);
-        Mockito.when(asm.getSecretValue(Mockito.any())).thenReturn(getSecretValueResult);
+        getSecretValueResult = GetSecretValueResponse.builder().versionStages(Arrays.asList("v1")).build();
+        MockitoAnnotations.openMocks(this);
+        withDescribeSecretResponse(describeSecretResult);
+        withGetSecretValueResponse(getSecretValueResult);
+    }
+
+    private void withDescribeSecretResponse(DescribeSecretResponse resp) {
+        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class))).thenReturn(resp);
+    }
+
+    private void withGetSecretValueResponse(GetSecretValueResponse resp) {
+        Mockito.when(asm.getSecretValue(Mockito.any(GetSecretValueRequest.class))).thenReturn(resp);
     }
 
     private static void repeat(int number, IntConsumer c) {
@@ -64,13 +74,13 @@ public class SecretCacheTest {
         }
     }
 
-    @Test(expectedExceptions = {SdkClientException.class})
+    @Test(expectedExceptions = {SecretsManagerException.class})
     public void exceptionSecretCacheTest() {
         SecretCache sc = new SecretCache();
         sc.getSecretString("");
     }
 
-    @Test(expectedExceptions = {SdkClientException.class})
+    @Test(expectedExceptions = {SecretsManagerException.class})
     public void exceptionSecretCacheConfigTest() {
         try (SecretCache sc = new SecretCache(new SecretCacheConfiguration()
                 .withCacheItemTTL(SecretCacheConfiguration.DEFAULT_CACHE_ITEM_TTL)
@@ -89,7 +99,7 @@ public class SecretCacheTest {
             sc1 = new SecretCache((SecretCacheConfiguration)null);
         } catch (Exception e) {}
         try {
-            sc2 = new SecretCache((AWSSecretsManagerClientBuilder)null);
+            sc2 = new SecretCache((SecretsManagerClientBuilder)null);
         } catch (Exception e) {}
     }
 
@@ -98,19 +108,19 @@ public class SecretCacheTest {
         final String secret = "basicSecretCacheTest";
         Map<String, List<String>> versionMap = new HashMap<String, List<String>>();
         versionMap.put("versionId", Arrays.asList("AWSCURRENT"));
-        Mockito.when(describeSecretResult.getVersionIdsToStages()).thenReturn(versionMap);
-        getSecretValueResult.setSecretString(secret);
-        getSecretValueResult.setSecretBinary(ByteBuffer.wrap(secret.getBytes()));
+        Mockito.when(describeSecretResult.versionIdsToStages()).thenReturn(versionMap);
+        SdkBytes secretBin = SdkBytes.fromByteBuffer(ByteBuffer.wrap(secret.getBytes()));
+        withGetSecretValueResponse(GetSecretValueResponse.builder().secretString(secret).secretBinary(secretBin).build());
+
         SecretCache sc = new SecretCache(asm);
 
         // Request the secret multiple times and verify the correct result
         repeat(10, n -> Assert.assertEquals(sc.getSecretString(""), secret));
 
         // Verify that multiple requests did not call the API
-        Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any());
-        Mockito.verify(asm, Mockito.times(1)).getSecretValue(Mockito.any());
-
-        repeat(10, n -> Assert.assertEquals(sc.getSecretBinary(""),
+        Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any(DescribeSecretRequest.class));
+        Mockito.verify(asm, Mockito.times(1)).getSecretValue(Mockito.any(GetSecretValueRequest.class));
+        repeat(10, n -> Assert.assertEquals(sc.getSecretBinary("").asByteBuffer(),
                 ByteBuffer.wrap(secret.getBytes())));
     }
 
@@ -119,9 +129,9 @@ public class SecretCacheTest {
         final String secret = "hookSecretCacheTest";
         Map<String, List<String>> versionMap = new HashMap<String, List<String>>();
         versionMap.put("versionId", Arrays.asList("AWSCURRENT"));
-        Mockito.when(describeSecretResult.getVersionIdsToStages()).thenReturn(versionMap);
-        getSecretValueResult.setSecretString(secret);
-        getSecretValueResult.setSecretBinary(ByteBuffer.wrap(secret.getBytes()));
+        Mockito.when(describeSecretResult.versionIdsToStages()).thenReturn(versionMap);
+        SdkBytes secretBin = SdkBytes.fromByteBuffer(ByteBuffer.wrap(secret.getBytes()));
+        withGetSecretValueResponse(GetSecretValueResponse.builder().secretString(secret).secretBinary(secretBin).build());
         class Hook implements SecretCacheHook {
             private HashMap<Integer, Object> map = new HashMap<Integer, Object>();
             public Object put(final Object o) {
@@ -143,10 +153,10 @@ public class SecretCacheTest {
         repeat(10, n -> Assert.assertEquals(sc.getSecretString(""), secret));
 
         // Verify that multiple requests did not call the API
-        Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any());
-        Mockito.verify(asm, Mockito.times(1)).getSecretValue(Mockito.any());
+        Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any(DescribeSecretRequest.class));
+        Mockito.verify(asm, Mockito.times(1)).getSecretValue(Mockito.any(GetSecretValueRequest.class));
 
-        repeat(10, n -> Assert.assertEquals(sc.getSecretBinary(""),
+        repeat(10, n -> Assert.assertEquals(sc.getSecretBinary("").asByteBuffer(),
                 ByteBuffer.wrap(secret.getBytes())));
         Assert.assertEquals(hook.getCount(), 2);
     }
@@ -156,20 +166,19 @@ public class SecretCacheTest {
         final String secret = "basicSecretCacheTest";
         Map<String, List<String>> versionMap = new HashMap<String, List<String>>();
         versionMap.put("versionId", Arrays.asList("AWSCURRENT"));
-        Mockito.when(describeSecretResult.getVersionIdsToStages()).thenReturn(versionMap);
-        getSecretValueResult.setSecretString(secret);
-        getSecretValueResult.setSecretBinary(ByteBuffer.wrap(secret.getBytes()));
-        getSecretValueResult.setVersionStages(null);
+        Mockito.when(describeSecretResult.versionIdsToStages()).thenReturn(versionMap);
+        SdkBytes secretBin = SdkBytes.fromByteBuffer(ByteBuffer.wrap(secret.getBytes()));
+        withGetSecretValueResponse(GetSecretValueResponse.builder().secretString(secret).secretBinary(secretBin).build());
         SecretCache sc = new SecretCache(asm);
 
         // Request the secret multiple times and verify the correct result
         repeat(10, n -> Assert.assertEquals(sc.getSecretString(""), secret));
 
         // Verify that multiple requests did not call the API
-        Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any());
-        Mockito.verify(asm, Mockito.times(1)).getSecretValue(Mockito.any());
+        Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any(DescribeSecretRequest.class));
+        Mockito.verify(asm, Mockito.times(1)).getSecretValue(Mockito.any(GetSecretValueRequest.class));
 
-        repeat(10, n -> Assert.assertEquals(sc.getSecretBinary(""),
+        repeat(10, n -> Assert.assertEquals(sc.getSecretBinary("").asByteBuffer(),
                 ByteBuffer.wrap(secret.getBytes())));
     }
 
@@ -178,47 +187,45 @@ public class SecretCacheTest {
         final String secret = "basicSecretCacheRefreshNowTest";
         Map<String, List<String>> versionMap = new HashMap<String, List<String>>();
         versionMap.put("versionId", Arrays.asList("AWSCURRENT"));
-        Mockito.when(describeSecretResult.getVersionIdsToStages()).thenReturn(versionMap);
-        getSecretValueResult.setSecretString(secret);
-        getSecretValueResult.setSecretBinary(ByteBuffer.wrap(secret.getBytes()));
+        Mockito.when(describeSecretResult.versionIdsToStages()).thenReturn(versionMap);
+        SdkBytes secretBin = SdkBytes.fromByteBuffer(ByteBuffer.wrap(secret.getBytes()));
+        withGetSecretValueResponse(GetSecretValueResponse.builder().secretString(secret).secretBinary(secretBin).build());
         SecretCache sc = new SecretCache(asm);
 
         // Request the secret multiple times and verify the correct result
         repeat(10, n -> Assert.assertEquals(sc.getSecretString(""), secret));
 
         // Verify that multiple requests did not call the API
-        Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any());
-        Mockito.verify(asm, Mockito.times(1)).getSecretValue(Mockito.any());
+        Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any(DescribeSecretRequest.class));
+        Mockito.verify(asm, Mockito.times(1)).getSecretValue(Mockito.any(GetSecretValueRequest.class));
 
         sc.refreshNow("");
-        Mockito.verify(asm, Mockito.times(2)).describeSecret(Mockito.any());
-        Mockito.verify(asm, Mockito.times(1)).getSecretValue(Mockito.any());
+        Mockito.verify(asm, Mockito.times(2)).describeSecret(Mockito.any(DescribeSecretRequest.class));
+        Mockito.verify(asm, Mockito.times(1)).getSecretValue(Mockito.any(GetSecretValueRequest.class));
 
         repeat(10, n -> Assert.assertEquals(sc.getSecretString(""), secret));
-        Mockito.verify(asm, Mockito.times(2)).describeSecret(Mockito.any());
-        Mockito.verify(asm, Mockito.times(1)).getSecretValue(Mockito.any());
+        Mockito.verify(asm, Mockito.times(2)).describeSecret(Mockito.any(DescribeSecretRequest.class));
+        Mockito.verify(asm, Mockito.times(1)).getSecretValue(Mockito.any(GetSecretValueRequest.class));
     }
 
     @Test
     public void basicSecretCacheByteBufferTest() {
         final String secret = "basicSecretCacheByteBufferTest";
         Map<String, List<String>> versionMap = new HashMap<String, List<String>>();
-        ByteBuffer buffer = ByteBuffer.allocateDirect(secret.getBytes().length);
-        buffer.put(secret.getBytes());
         versionMap.put("versionId", Arrays.asList("AWSCURRENT"));
-        Mockito.when(describeSecretResult.getVersionIdsToStages()).thenReturn(versionMap);
-        getSecretValueResult.setSecretString(secret);
-        getSecretValueResult.setSecretBinary(buffer);
+        Mockito.when(describeSecretResult.versionIdsToStages()).thenReturn(versionMap);
+        SdkBytes secretBin = SdkBytes.fromByteArray(secret.getBytes());
+        withGetSecretValueResponse(GetSecretValueResponse.builder().secretString(secret).secretBinary(secretBin).build());
         SecretCache sc = new SecretCache(asm);
 
         // Request the secret multiple times and verify the correct result
         repeat(10, n -> Assert.assertEquals(sc.getSecretString(""), secret));
 
         // Verify that multiple requests did not call the API
-        Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any());
-        Mockito.verify(asm, Mockito.times(1)).getSecretValue(Mockito.any());
+        Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any(DescribeSecretRequest.class));
+        Mockito.verify(asm, Mockito.times(1)).getSecretValue(Mockito.any(GetSecretValueRequest.class));
 
-        repeat(10, n -> Assert.assertEquals(sc.getSecretBinary(""),
+        repeat(10, n -> Assert.assertEquals(sc.getSecretBinary("").asByteBuffer(),
                 ByteBuffer.wrap(secret.getBytes())));
     }
 
@@ -228,19 +235,19 @@ public class SecretCacheTest {
         final String secretB = "basicSecretCacheMultipleTestB";
         Map<String, List<String>> versionMap = new HashMap<String, List<String>>();
         versionMap.put("versionId", Arrays.asList("AWSCURRENT"));
-        Mockito.when(describeSecretResult.getVersionIdsToStages()).thenReturn(versionMap);
-        getSecretValueResult.setSecretString(secretA);
+        Mockito.when(describeSecretResult.versionIdsToStages()).thenReturn(versionMap);
+        withGetSecretValueResponse(GetSecretValueResponse.builder().secretString(secretA).build());
         SecretCache sc = new SecretCache(asm);
 
         // Request the secret multiple times and verify the correct result
         repeat(10, n -> Assert.assertEquals(sc.getSecretString("SecretA"), secretA));
 
-        getSecretValueResult.setSecretString(secretB);
+        withGetSecretValueResponse(GetSecretValueResponse.builder().secretString(secretB).build());
         repeat(10, n -> Assert.assertEquals(sc.getSecretString("SecretB"), secretB));
 
         // Verify that multiple requests did not call the API
-        Mockito.verify(asm, Mockito.times(2)).describeSecret(Mockito.any());
-        Mockito.verify(asm, Mockito.times(2)).getSecretValue(Mockito.any());
+        Mockito.verify(asm, Mockito.times(2)).describeSecret(Mockito.any(DescribeSecretRequest.class));
+        Mockito.verify(asm, Mockito.times(2)).getSecretValue(Mockito.any(GetSecretValueRequest.class));
     }
 
     @Test
@@ -248,8 +255,8 @@ public class SecretCacheTest {
         final String secret = "basicSecretCacheRefreshTest";
         Map<String, List<String>> versionMap = new HashMap<String, List<String>>();
         versionMap.put("versionId", Arrays.asList("AWSCURRENT"));
-        Mockito.when(describeSecretResult.getVersionIdsToStages()).thenReturn(versionMap);
-        getSecretValueResult.setSecretString(secret);
+        Mockito.when(describeSecretResult.versionIdsToStages()).thenReturn(versionMap);
+        withGetSecretValueResponse(GetSecretValueResponse.builder().secretString(secret).build());
         SecretCache sc = new SecretCache(new SecretCacheConfiguration()
                 .withClient(asm)
                 .withCacheItemTTL(500));
@@ -258,15 +265,15 @@ public class SecretCacheTest {
         repeat(10, n -> Assert.assertEquals(sc.getSecretString(""), secret));
 
         // Verify that multiple requests did not call the API
-        Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any());
-        Mockito.verify(asm, Mockito.times(1)).getSecretValue(Mockito.any());
+        Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any(DescribeSecretRequest.class));
+        Mockito.verify(asm, Mockito.times(1)).getSecretValue(Mockito.any(GetSecretValueRequest.class));
 
         // Wait long enough to expire the TTL on the cached item.
         Thread.sleep(600);
         repeat(10, n -> Assert.assertEquals(sc.getSecretString(""), secret));
         // Verify that the refresh occurred after the ttl
-        Mockito.verify(asm, Mockito.times(2)).describeSecret(Mockito.any());
-        Mockito.verify(asm, Mockito.times(1)).getSecretValue(Mockito.any());
+        Mockito.verify(asm, Mockito.times(2)).describeSecret(Mockito.any(DescribeSecretRequest.class));
+        Mockito.verify(asm, Mockito.times(1)).getSecretValue(Mockito.any(GetSecretValueRequest.class));
     }
 
     @Test
@@ -274,8 +281,8 @@ public class SecretCacheTest {
         final String secret = "secretCacheRefreshAfterVersionChangeTest";
         Map<String, List<String>> versionMap = new HashMap<String, List<String>>();
         versionMap.put("versionId", Arrays.asList("AWSCURRENT"));
-        Mockito.when(describeSecretResult.getVersionIdsToStages()).thenReturn(versionMap);
-        getSecretValueResult.setSecretString(secret);
+        Mockito.when(describeSecretResult.versionIdsToStages()).thenReturn(versionMap);
+        withGetSecretValueResponse(GetSecretValueResponse.builder().secretString(secret).build());
         SecretCache sc = new SecretCache(new SecretCacheConfiguration()
                 .withClient(asm)
                 .withCacheItemTTL(500));
@@ -284,8 +291,8 @@ public class SecretCacheTest {
         repeat(5, n -> Assert.assertEquals(sc.getSecretString(""), secret));
 
         // Verify that multiple requests did not call the API
-        Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any());
-        Mockito.verify(asm, Mockito.times(1)).getSecretValue(Mockito.any());
+        Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any(DescribeSecretRequest.class));
+        Mockito.verify(asm, Mockito.times(1)).getSecretValue(Mockito.any(GetSecretValueRequest.class));
 
         // Wait long enough to expire the TTL on the cached item.
         Thread.sleep(600);
@@ -294,14 +301,14 @@ public class SecretCacheTest {
         versionMap.put("versionIdNew", Arrays.asList("AWSCURRENT"));
         repeat(5, n -> Assert.assertEquals(sc.getSecretString(""), secret));
         // Verify that the refresh occurred after the ttl
-        Mockito.verify(asm, Mockito.times(2)).describeSecret(Mockito.any());
-        Mockito.verify(asm, Mockito.times(2)).getSecretValue(Mockito.any());
+        Mockito.verify(asm, Mockito.times(2)).describeSecret(Mockito.any(DescribeSecretRequest.class));
+        Mockito.verify(asm, Mockito.times(2)).getSecretValue(Mockito.any(GetSecretValueRequest.class));
     }
 
     @Test
     public void basicSecretCacheTestNoVersions() {
         final String secret = "basicSecretCacheTestNoVersion";
-        getSecretValueResult.setSecretString(secret);
+        withGetSecretValueResponse(GetSecretValueResponse.builder().secretString(secret).build());
         SecretCache sc = new SecretCache(asm);
 
         // Request the secret multiple times and verify the correct result
@@ -309,14 +316,14 @@ public class SecretCacheTest {
         repeat(10, m -> Assert.assertEquals(sc.getSecretBinary(""), null));
 
         // Verify that multiple requests did not call the API
-        Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any());
-        Mockito.verify(asm, Mockito.times(0)).getSecretValue(Mockito.any());
+        Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any(DescribeSecretRequest.class));
+        Mockito.verify(asm, Mockito.times(0)).getSecretValue(Mockito.any(GetSecretValueRequest.class));
     }
 
     @Test(expectedExceptions = {RuntimeException.class})
     public void basicSecretCacheExceptionTest() {
         final String secret = "basicSecretCacheExceptionTest";
-        Mockito.when(asm.describeSecret(Mockito.any())).thenThrow(new RuntimeException());
+        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class))).thenThrow(new RuntimeException());
         SecretCache sc = new SecretCache(asm);
         sc.getSecretString("");
     }
@@ -324,19 +331,19 @@ public class SecretCacheTest {
     @Test
     public void basicSecretCacheExceptionRefreshNowTest() throws Throwable {
         final String secret = "basicSecretCacheExceptionTest";
-        Mockito.when(asm.describeSecret(Mockito.any())).thenThrow(new RuntimeException());
+        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class))).thenThrow(new RuntimeException());
         SecretCache sc = new SecretCache(asm);
         Assert.assertFalse(sc.refreshNow(""));
-        Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any());
+        Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any(DescribeSecretRequest.class));
         Assert.assertFalse(sc.refreshNow(""));
-        Mockito.verify(asm, Mockito.times(2)).describeSecret(Mockito.any());
+        Mockito.verify(asm, Mockito.times(2)).describeSecret(Mockito.any(DescribeSecretRequest.class));
     }
 
     @Test
     public void basicSecretCacheExceptionRetryTest() throws Throwable {
         final String secret = "basicSecretCacheExceptionTest";
         final int retryCount = 10;
-        Mockito.when(asm.describeSecret(Mockito.any())).thenThrow(new RuntimeException());
+        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class))).thenThrow(new RuntimeException());
         SecretCache sc = new SecretCache(asm);
         for (int n = 0; n < retryCount; ++n) {
             try {
@@ -345,7 +352,7 @@ public class SecretCacheTest {
             } catch (RuntimeException ex) {
             }
         }
-        Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any());
+        Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any(DescribeSecretRequest.class));
 
         // Wait the backoff interval before retrying failed requests to verify
         // a retry will be performed.
@@ -355,13 +362,13 @@ public class SecretCacheTest {
             Assert.fail("Exception should have been thrown!");
         } catch (RuntimeException ex) {}
         // The api call should have been retried after the delay.
-        Mockito.verify(asm, Mockito.times(2)).describeSecret(Mockito.any());
+        Mockito.verify(asm, Mockito.times(2)).describeSecret(Mockito.any(DescribeSecretRequest.class));
     }
 
     @Test
     public void basicSecretCacheNullTest() {
         final String secret = "basicSecretCacheNullTest";
-        Mockito.when(asm.describeSecret(Mockito.any())).thenReturn(null);
+        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class))).thenReturn(null);
         SecretCache sc = new SecretCache(asm);
         Assert.assertNull(sc.getSecretString(""));
     }
@@ -369,7 +376,7 @@ public class SecretCacheTest {
     @Test
     public void basicSecretCacheNullStagesTest() {
         final String secret = "basicSecretCacheNullStagesTest";
-        Mockito.when(describeSecretResult.getVersionIdsToStages()).thenReturn(null);
+        Mockito.when(describeSecretResult.versionIdsToStages()).thenReturn(null);
         SecretCache sc = new SecretCache(asm);
         Assert.assertNull(sc.getSecretString(""));
     }
@@ -379,16 +386,16 @@ public class SecretCacheTest {
         final String secret = "basicSecretCacheTest";
         Map<String, List<String>> versionMap = new HashMap<String, List<String>>();
         versionMap.put("versionId", null);
-        Mockito.when(describeSecretResult.getVersionIdsToStages()).thenReturn(versionMap);
-        getSecretValueResult.setSecretString(secret);
+        Mockito.when(describeSecretResult.versionIdsToStages()).thenReturn(versionMap);
+        withGetSecretValueResponse(GetSecretValueResponse.builder().secretString(secret).build());
         SecretCache sc = new SecretCache(asm);
 
         // Request the secret multiple times and verify the correct result
         repeat(10, n -> Assert.assertEquals(sc.getSecretString(""), null));
 
         // Verify that multiple requests did not call the API
-        Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any());
-        Mockito.verify(asm, Mockito.times(0)).getSecretValue(Mockito.any());
+        Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any(DescribeSecretRequest.class));
+        Mockito.verify(asm, Mockito.times(0)).getSecretValue(Mockito.any(GetSecretValueRequest.class));
     }
 
 }
