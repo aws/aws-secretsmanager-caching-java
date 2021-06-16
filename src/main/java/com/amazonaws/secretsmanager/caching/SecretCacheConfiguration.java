@@ -33,6 +33,12 @@ public class SecretCacheConfiguration {
     /** The default version stage to use when retrieving secret values. */
     public static final String DEFAULT_VERSION_STAGE = "AWSCURRENT";
 
+    /** The environment variable name of cache item ttl. */
+    public static final String CACHE_ITEM_TTL_ENV = "AWS_SECRETSMANAGER_CACHE_ITEM_TTL";
+
+    /** The system property name of cache item ttl. */
+    public static final String CACHE_ITEM_TTL_PROP = "aws.secretsmanager.cache.item.ttl";
+
     /** The client this cache instance will use for accessing AWS Secrets Manager. */
     private AWSSecretsManager client = null;
 
@@ -64,6 +70,7 @@ public class SecretCacheConfiguration {
      *
      */
     public SecretCacheConfiguration() {
+        initialize();
     }
 
     /**
@@ -230,6 +237,32 @@ public class SecretCacheConfiguration {
     public SecretCacheConfiguration withVersionStage(String versionStage) {
         this.setVersionStage(versionStage);
         return this;
+    }
+
+    /**
+     * Sets the TTL in milliseconds for the cached items with environment variables
+     * or system properties, if not set variables use default cache item ttl.
+     */
+    private void initialize() {
+        cacheItemTTL = findCacheItemTTL();
+    }
+
+    private long findCacheItemTTL() {
+        String env = getCacheItemTTLEnv();
+        if (env != null) {
+             return Long.parseLong(env);
+        }
+
+        String prop = System.getProperties().getProperty(CACHE_ITEM_TTL_PROP);
+        if (prop != null) {
+            return Long.parseLong(prop);
+        }
+
+        return DEFAULT_CACHE_ITEM_TTL;
+    }
+
+    private String getCacheItemTTLEnv() {
+        return System.getenv(CACHE_ITEM_TTL_ENV);
     }
 
 }
