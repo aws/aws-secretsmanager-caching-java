@@ -1,5 +1,7 @@
 ## AWS Secrets Manager Java caching client
 
+[build](https://github.com/aws/aws-secretsmanager-caching-java/actions/workflows/build_test.yml/badge.svg)
+
 The AWS Secrets Manager Java caching client enables in-process caching of secrets for Java applications.
 
 ## Getting Started
