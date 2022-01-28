@@ -27,7 +27,7 @@ You can get the latest release from Maven:
 <dependency>
   <groupId>com.amazonaws.secretsmanager</groupId>
   <artifactId>aws-secretsmanager-caching-java</artifactId>
-  <version>1.0.1</version>
+  <version>1.0.2</version>
 </dependency>
 ```
 
