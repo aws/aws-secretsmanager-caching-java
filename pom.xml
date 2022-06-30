@@ -39,7 +39,7 @@
         <maven.compiler.target>1.8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <checkstyle.plugin.version>3.1.2</checkstyle.plugin.version>
-        <findbugs.plugin.version>3.0.4</findbugs.plugin.version>
+        <findbugs.plugin.version>3.0.5</findbugs.plugin.version>
     </properties>
 
     <dependencies>
