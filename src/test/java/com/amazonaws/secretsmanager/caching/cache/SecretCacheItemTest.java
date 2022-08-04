@@ -28,5 +28,6 @@ public class SecretCacheItemTest {
         Assert.assertFalse(i1.equals(null));
         Assert.assertEquals(i1.hashCode(), i2.hashCode());
         Assert.assertNotEquals(i1.hashCode(), i3.hashCode());
+        Assert.assertEquals(i3.toString(), "SecretCacheItem: test3");
     }
 }

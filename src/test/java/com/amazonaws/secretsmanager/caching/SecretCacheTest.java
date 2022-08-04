@@ -112,6 +112,7 @@ public class SecretCacheTest {
 
         repeat(10, n -> Assert.assertEquals(sc.getSecretBinary(""),
                 ByteBuffer.wrap(secret.getBytes())));
+        sc.close();
     }
 
     @Test

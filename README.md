@@ -1,5 +1,8 @@
 ## AWS Secrets Manager Java caching client
 
+[![build](https://github.com/aws/aws-secretsmanager-caching-java/actions/workflows/maven.yml/badge.svg?branch=master&event=push)](https://github.com/aws/aws-secretsmanager-caching-java/actions/workflows/maven.yml)
+[![coverage](https://codecov.io/gh/aws/aws-secretsmanager-caching-java/branch/master/graph/badge.svg?token=Kk9RDSuKTE)](https://codecov.io/gh/aws/aws-secretsmanager-caching-java)
+
 The AWS Secrets Manager Java caching client enables in-process caching of secrets for Java applications.
 
 ## Getting Started

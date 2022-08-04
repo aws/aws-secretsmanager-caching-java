@@ -31,5 +31,6 @@ public class SecretCacheVersionTest {
         Assert.assertEquals(i1.hashCode(), i2.hashCode());
         Assert.assertNotEquals(i1.hashCode(), i3.hashCode());
         Assert.assertNotEquals(i1.hashCode(), i4.hashCode());
+        Assert.assertEquals(i1.toString(), "SecretCacheVersion: test version");
     }
 }
