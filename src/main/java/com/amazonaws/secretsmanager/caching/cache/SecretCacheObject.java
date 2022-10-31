@@ -125,7 +125,7 @@ public abstract class SecretCacheObject<T> {
     public abstract int hashCode();
     public abstract String toString();
 
-    protected <T extends AmazonWebServiceRequest> T updateUserAgent(T request) {
+    protected <U extends AmazonWebServiceRequest> U updateUserAgent(U request) {
         request.getRequestClientOptions().appendUserAgent(VersionInfo.USER_AGENT);
         return request;
     }
