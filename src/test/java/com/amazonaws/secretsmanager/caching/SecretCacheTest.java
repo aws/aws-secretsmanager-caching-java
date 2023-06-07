@@ -53,7 +53,7 @@ public class SecretCacheTest {
     @BeforeMethod
     public void setUp() {
         getSecretValueResult = new GetSecretValueResult().withVersionStages(Arrays.asList("v1"));
-        MockitoAnnotations.initMocks(this);
+        MockitoAnnotations.openMocks(this);
         Mockito.when(asm.describeSecret(Mockito.any())).thenReturn(describeSecretResult);
         Mockito.when(asm.getSecretValue(Mockito.any())).thenReturn(getSecretValueResult);
     }
