@@ -14,11 +14,14 @@ package com.amazonaws.secretsmanager.caching;
 
 import com.amazonaws.secretsmanager.caching.cache.LRUCache;
 import com.amazonaws.secretsmanager.caching.cache.SecretCacheItem;
-import com.amazonaws.services.secretsmanager.AWSSecretsManager;
-import com.amazonaws.services.secretsmanager.AWSSecretsManagerClientBuilder;
-import com.amazonaws.services.secretsmanager.model.GetSecretValueResult;
+import com.amazonaws.secretsmanager.caching.cache.internal.VersionInfo;
 
-import java.nio.ByteBuffer;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
+import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
+import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
+import software.amazon.awssdk.services.secretsmanager.SecretsManagerClientBuilder;
+import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueResponse;
 
 /**
  * Provides the primary entry-point to the AWS Secrets Manager client cache SDK.
@@ -47,13 +50,13 @@ public class SecretCache implements AutoCloseable {
     private final SecretCacheConfiguration config;
 
     /** The AWS Secrets Manager client to use when requesting secrets. */
-    private final AWSSecretsManager client;
+    private final SecretsManagerClient client;
 
     /**
      * Constructs a new secret cache using the standard AWS Secrets Manager client with default options.
      */
     public SecretCache() {
-        this(AWSSecretsManagerClientBuilder.standard());
+        this(SecretsManagerClient.builder());
     }
 
 
@@ -64,19 +67,22 @@ public class SecretCache implements AutoCloseable {
      * @param builder
      *        The builder to use for creating the AWS Secrets Manager client.
      */
-    public SecretCache(AWSSecretsManagerClientBuilder builder) {
-        this(null == builder ?
-                AWSSecretsManagerClientBuilder.standard().build() :
-                builder.build());
+    public SecretCache(SecretsManagerClientBuilder builder) {
+        this(new SecretCacheConfiguration().withClient(builder
+        .overrideConfiguration(
+            builder.overrideConfiguration().toBuilder()
+            .putAdvancedOption(SdkAdvancedClientOption.USER_AGENT_SUFFIX, VersionInfo.USER_AGENT)
+            .build()).build()));
     }
 
     /**
      * Constructs a new secret cache using the provided AWS Secrets Manager client.
      *
      * @param client
-     *        The AWS Secrets Manager client to use for requesting secret values.
+     *               The AWS Secrets Manager client to use for requesting secret
+     *               values.
      */
-    public SecretCache(AWSSecretsManager client) {
+    public SecretCache(SecretsManagerClient client) {
         this(new SecretCacheConfiguration().withClient(client));
     }
 
@@ -90,8 +96,9 @@ public class SecretCache implements AutoCloseable {
         if (null == config) { config = new SecretCacheConfiguration(); }
         this.cache = new LRUCache<String, SecretCacheItem>(config.getMaxCacheSize());
         this.config = config;
+        ClientOverrideConfiguration defaultOverride = ClientOverrideConfiguration.builder().putAdvancedOption(SdkAdvancedClientOption.USER_AGENT_SUFFIX, VersionInfo.USER_AGENT).build();
         this.client = config.getClient() != null ? config.getClient() :
-                AWSSecretsManagerClientBuilder.standard().build();
+                SecretsManagerClient.builder().overrideConfiguration(defaultOverride).build();
     }
 
     /**
@@ -120,9 +127,9 @@ public class SecretCache implements AutoCloseable {
      */
     public String getSecretString(final String secretId) {
         SecretCacheItem secret = this.getCachedSecret(secretId);
-        GetSecretValueResult gsv = secret.getSecretValue();
+        GetSecretValueResponse gsv = secret.getSecretValue();
         if (null == gsv) { return null; }
-        return gsv.getSecretString();
+        return gsv.secretString();
     }
 
     /**
@@ -132,11 +139,11 @@ public class SecretCache implements AutoCloseable {
      *        The identifier for the secret being requested.
      * @return The binary secret
      */
-    public ByteBuffer getSecretBinary(final String secretId) {
+    public SdkBytes getSecretBinary(final String secretId) {
         SecretCacheItem secret = this.getCachedSecret(secretId);
-        GetSecretValueResult gsv = secret.getSecretValue();
+        GetSecretValueResponse gsv = secret.getSecretValue();
         if (null == gsv) { return null; }
-        return gsv.getSecretBinary();
+        return gsv.secretBinary();
     }
 
     /**
