@@ -140,7 +140,7 @@ public class SecretCacheItem extends SecretCacheObject<DescribeSecretResponse> {
     /**
      * Return the cached result from AWS Secrets Manager for GetSecretValue.
      *
-     * @param describeResult
+     * @param describeResponse
      *            The result of the Describe Secret request to AWS Secrets Manager.
      * @return The cached GetSecretValue result.
      */

@@ -53,33 +53,34 @@ public class SecretCache implements AutoCloseable {
     private final SecretsManagerClient client;
 
     /**
-     * Constructs a new secret cache using the standard AWS Secrets Manager client with default options.
+     * Constructs a new secret cache using the standard AWS Secrets Manager client
+     * with default options.
      */
     public SecretCache() {
         this(SecretsManagerClient.builder());
     }
 
-
     /**
-     * Constructs a new secret cache using an AWS Secrets Manager client created using the
+     * Constructs a new secret cache using an AWS Secrets Manager client created
+     * using the
      * provided builder.
      *
-     * @param builder
-     *        The builder to use for creating the AWS Secrets Manager client.
+     * @param builder The builder to use for creating the AWS Secrets Manager
+     *                client.
      */
     public SecretCache(SecretsManagerClientBuilder builder) {
         this(new SecretCacheConfiguration().withClient(builder
-        .overrideConfiguration(
-            builder.overrideConfiguration().toBuilder()
-            .putAdvancedOption(SdkAdvancedClientOption.USER_AGENT_SUFFIX, VersionInfo.USER_AGENT)
-            .build()).build()));
+                .overrideConfiguration(
+                        builder.overrideConfiguration().toBuilder()
+                                .putAdvancedOption(SdkAdvancedClientOption.USER_AGENT_SUFFIX, VersionInfo.USER_AGENT)
+                                .build())
+                .build()));
     }
 
     /**
      * Constructs a new secret cache using the provided AWS Secrets Manager client.
      *
-     * @param client
-     *               The AWS Secrets Manager client to use for requesting secret
+     * @param client The AWS Secrets Manager client to use for requesting secret
      *               values.
      */
     public SecretCache(SecretsManagerClient client) {
@@ -89,23 +90,24 @@ public class SecretCache implements AutoCloseable {
     /**
      * Constructs a new secret cache using the provided cache configuration.
      *
-     * @param config
-     *        The secret cache configuration.
+     * @param config The secret cache configuration.
      */
     public SecretCache(SecretCacheConfiguration config) {
-        if (null == config) { config = new SecretCacheConfiguration(); }
+        if (null == config) {
+            config = new SecretCacheConfiguration();
+        }
         this.cache = new LRUCache<String, SecretCacheItem>(config.getMaxCacheSize());
         this.config = config;
-        ClientOverrideConfiguration defaultOverride = ClientOverrideConfiguration.builder().putAdvancedOption(SdkAdvancedClientOption.USER_AGENT_SUFFIX, VersionInfo.USER_AGENT).build();
-        this.client = config.getClient() != null ? config.getClient() :
-                SecretsManagerClient.builder().overrideConfiguration(defaultOverride).build();
+        ClientOverrideConfiguration defaultOverride = ClientOverrideConfiguration.builder()
+                .putAdvancedOption(SdkAdvancedClientOption.USER_AGENT_SUFFIX, VersionInfo.USER_AGENT).build();
+        this.client = config.getClient() != null ? config.getClient()
+                : SecretsManagerClient.builder().overrideConfiguration(defaultOverride).build();
     }
 
     /**
      * Method to retrieve the cached secret item.
      *
-     * @param secretId
-     *        The identifier for the secret being requested.
+     * @param secretId The identifier for the secret being requested.
      * @return The cached secret item
      */
     private SecretCacheItem getCachedSecret(final String secretId) {
@@ -121,39 +123,40 @@ public class SecretCache implements AutoCloseable {
     /**
      * Method to retrieve a string secret from AWS Secrets Manager.
      *
-     * @param secretId
-     *        The identifier for the secret being requested.
+     * @param secretId The identifier for the secret being requested.
      * @return The string secret
      */
     public String getSecretString(final String secretId) {
         SecretCacheItem secret = this.getCachedSecret(secretId);
         GetSecretValueResponse gsv = secret.getSecretValue();
-        if (null == gsv) { return null; }
+        if (null == gsv) {
+            return null;
+        }
         return gsv.secretString();
     }
 
     /**
      * Method to retrieve a binary secret from AWS Secrets Manager.
      *
-     * @param secretId
-     *        The identifier for the secret being requested.
+     * @param secretId The identifier for the secret being requested.
      * @return The binary secret
      */
     public SdkBytes getSecretBinary(final String secretId) {
         SecretCacheItem secret = this.getCachedSecret(secretId);
         GetSecretValueResponse gsv = secret.getSecretValue();
-        if (null == gsv) { return null; }
+        if (null == gsv) {
+            return null;
+        }
         return gsv.secretBinary();
     }
 
     /**
      * Method to force the refresh of a cached secret state.
      *
-     * @param secretId
-     *        The identifier for the secret being refreshed.
+     * @param secretId The identifier for the secret being refreshed.
      * @return True if the refresh completed without error.
-     * @throws InterruptedException
-     *             If the thread is interrupted while waiting for the refresh.
+     * @throws InterruptedException If the thread is interrupted while waiting for
+     *                              the refresh.
      */
     public boolean refreshNow(final String secretId) throws InterruptedException {
         SecretCacheItem secret = this.getCachedSecret(secretId);
