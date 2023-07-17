@@ -106,7 +106,7 @@ public class SecretCacheTest {
         Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any(DescribeSecretRequest.class));
         Mockito.verify(asm, Mockito.times(1)).getSecretValue(Mockito.any(GetSecretValueRequest.class));
 
-        repeat(10, n -> Assert.assertEquals(sc.getSecretBinary("").asByteBuffer(),
+        repeat(10, n -> Assert.assertEquals(sc.getSecretBinary(""),
                 ByteBuffer.wrap(secret.getBytes())));
         sc.close();
     }
@@ -153,7 +153,7 @@ public class SecretCacheTest {
         Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any(DescribeSecretRequest.class));
         Mockito.verify(asm, Mockito.times(1)).getSecretValue(Mockito.any(GetSecretValueRequest.class));
 
-        repeat(10, n -> Assert.assertEquals(sc.getSecretBinary("").asByteBuffer(),
+        repeat(10, n -> Assert.assertEquals(sc.getSecretBinary(""),
                 ByteBuffer.wrap(secret.getBytes())));
         Assert.assertEquals(hook.getCount(), 2);
         sc.close();
@@ -180,7 +180,7 @@ public class SecretCacheTest {
         Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any(DescribeSecretRequest.class));
         Mockito.verify(asm, Mockito.times(1)).getSecretValue(Mockito.any(GetSecretValueRequest.class));
 
-        repeat(10, n -> Assert.assertEquals(sc.getSecretBinary("").asByteBuffer(),
+        repeat(10, n -> Assert.assertEquals(sc.getSecretBinary(""),
                 ByteBuffer.wrap(secret.getBytes())));
         sc.close();
     }
@@ -236,13 +236,13 @@ public class SecretCacheTest {
         SecretCache sc = new SecretCache(asm);
 
         // Request the secret multiple times and verify the correct result
-        repeat(10, n -> Assert.assertEquals(sc.getSecretBinary("").asUtf8String(), secret));
+        repeat(10, n -> Assert.assertEquals(StandardCharsets.UTF_8.decode(sc.getSecretBinary("")).toString(), secret));
 
         // Verify that multiple requests did not call the API
         Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any(DescribeSecretRequest.class));
         Mockito.verify(asm, Mockito.times(1)).getSecretValue(Mockito.any(GetSecretValueRequest.class));
 
-        Assert.assertEquals(sc.getSecretBinary("").asByteBuffer(), ByteBuffer.wrap(secret.getBytes()));
+        Assert.assertEquals(sc.getSecretBinary(""), ByteBuffer.wrap(secret.getBytes()));
         sc.close();
     }
 

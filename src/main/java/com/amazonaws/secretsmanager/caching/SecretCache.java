@@ -12,11 +12,12 @@
  */
 package com.amazonaws.secretsmanager.caching;
 
+import java.nio.ByteBuffer;
+
 import com.amazonaws.secretsmanager.caching.cache.LRUCache;
 import com.amazonaws.secretsmanager.caching.cache.SecretCacheItem;
 import com.amazonaws.secretsmanager.caching.cache.internal.VersionInfo;
 
-import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
@@ -141,13 +142,13 @@ public class SecretCache implements AutoCloseable {
      * @param secretId The identifier for the secret being requested.
      * @return The binary secret
      */
-    public SdkBytes getSecretBinary(final String secretId) {
+    public ByteBuffer getSecretBinary(final String secretId) {
         SecretCacheItem secret = this.getCachedSecret(secretId);
         GetSecretValueResponse gsv = secret.getSecretValue();
         if (null == gsv) {
             return null;
         }
-        return gsv.secretBinary();
+        return gsv.secretBinary().asByteBuffer();
     }
 
     /**

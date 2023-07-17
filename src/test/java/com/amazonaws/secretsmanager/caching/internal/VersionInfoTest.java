@@ -11,7 +11,7 @@ public class VersionInfoTest {
     @Test
     public void versionInfoIsValid() {
         String ua = VersionInfo.USER_AGENT;
-        Pattern p = Pattern.compile("AwsSecretCache/\\d+.\\d+.\\d+.\\d+");
+        Pattern p = Pattern.compile("AwsSecretCache/\\d+.\\d+.\\d+");
 
         Assert.assertTrue(p.matcher(ua).matches(), "User agent " + ua + " is not valid");
     }

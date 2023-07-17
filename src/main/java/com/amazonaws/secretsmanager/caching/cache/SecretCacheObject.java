@@ -13,7 +13,6 @@
 
 package com.amazonaws.secretsmanager.caching.cache;
 
-import java.util.ArrayList;
 import java.util.concurrent.ThreadLocalRandom;
 
 import com.amazonaws.secretsmanager.caching.SecretCacheConfiguration;
@@ -243,22 +242,8 @@ public abstract class SecretCacheObject<T> {
             if (null == this.data) {
                 if (null != this.exception) { throw this.exception; }
             }
-            GetSecretValueResponse gsv = this.getSecretValue(this.getResult());
 
-            // If there is no cached result, return null.
-            if (null == gsv) { return null; }
-
-            GetSecretValueResponse.Builder builder = gsv.toBuilder()
-                    .versionStages(new ArrayList<>(gsv.versionStages()));
-
-            if (null != gsv.secretString()) {
-                builder.secretString(gsv.secretString());
-            }
-            if (null != gsv.secretBinary()) {
-                builder.secretBinary(gsv.secretBinary());
-            }
-
-            return builder.build();
+            return this.getSecretValue(this.getResult());
         }
     }
 
