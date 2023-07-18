@@ -18,10 +18,18 @@ package com.amazonaws.secretsmanager.caching.cache.internal;
  * client.
  */
 public class VersionInfo {
-    /**
-     * User agent
-     */
-    public static final String USER_AGENT = "AwsSecretCache/2.0.0";
+    public static final String VERSION_NUM = "2";
+    // incremented for design changes that break backward compatibility.
+    public static final String MAJOR_REVISION_NUM = VERSION_NUM;
+    // incremented for minor changes to the implementation
+    public static final String MINOR_REVISION_NUM = "0";
+    // incremented for releases containing an immediate bug fix.
+    public static final String BUGFIX_REVISION_NUM = "0";
+
+    public static final String RELEASE_VERSION = MAJOR_REVISION_NUM + "." + MINOR_REVISION_NUM
+            + "." + BUGFIX_REVISION_NUM;
+
+    public static final String USER_AGENT = "AwsSecretCache/" + RELEASE_VERSION;
 
     private VersionInfo() {
     }
