@@ -111,7 +111,7 @@ public class SecretCacheItem extends SecretCacheObject<DescribeSecretResponse> {
     /**
      * Return the secret version based on the current state of the secret.
      *
-     * @param describeResult
+     * @param describeResponse
      *            The result of the Describe Secret request to AWS Secrets Manager.
      * @return The cached secret version.
      */
