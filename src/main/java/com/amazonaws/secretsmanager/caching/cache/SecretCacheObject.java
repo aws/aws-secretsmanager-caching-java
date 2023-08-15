@@ -74,7 +74,7 @@ public abstract class SecretCacheObject<T> {
      * AWS Secrets Manager request.  This is used to calculate an exponential
      * backoff.
      */
-    private long exceptionCount = 0;
+    private long exceptionBackoffPower = 0;
 
     /**
      * The time to wait before retrying a failed AWS Secrets Manager request.
@@ -178,20 +178,24 @@ public abstract class SecretCacheObject<T> {
         try {
             this.setResult(this.executeRefresh());
             this.exception = null;
-            this.exceptionCount = 0;
+            this.exceptionBackoffPower = 0;
         } catch (RuntimeException ex) {
             this.exception = ex;
             // Determine the amount of growth in exception backoff time based on the growth
             // factor and default backoff duration.
             Long growth = 1L;
-            if (this.exceptionCount > 0) {
-                growth = (long)Math.pow(EXCEPTION_BACKOFF_GROWTH_FACTOR, this.exceptionCount);
+            if (this.exceptionBackoffPower > 0) {
+                growth = (long)Math.pow(EXCEPTION_BACKOFF_GROWTH_FACTOR, this.exceptionBackoffPower);
             }
-            this.exceptionCount += 1;
             growth *= EXCEPTION_BACKOFF;
             // Add in EXCEPTION_BACKOFF time to make sure the random jitter will not reduce
             // the wait time too low.
             Long retryWait = Math.min(EXCEPTION_BACKOFF + growth, BACKOFF_PLATEAU);
+            if ( retryWait < BACKOFF_PLATEAU ) {
+                // Only increase the backoff power if we haven't hit the backoff plateau yet.
+                this.exceptionBackoffPower += 1;
+            }
+
             // Use random jitter with the wait time
             retryWait = ThreadLocalRandom.current().nextLong(retryWait / 2, retryWait + 1);
             this.nextRetryTime = System.currentTimeMillis() + retryWait;
