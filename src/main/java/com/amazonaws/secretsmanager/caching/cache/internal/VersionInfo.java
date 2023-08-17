@@ -14,22 +14,23 @@
 package com.amazonaws.secretsmanager.caching.cache.internal;
 
 /**
- * This class specifies the versioning system for the AWS SecretsManager caching client.
+ * This class specifies the versioning system for the AWS SecretsManager caching
+ * client.
  */
 public class VersionInfo {
+    public static final String VERSION_NUM = "2";
     // incremented for design changes that break backward compatibility.
-    public static final String VERSION_NUM = "1";
-    // incremented for major changes to the implementation
-    public static final String MAJOR_REVISION_NUM = "1";
+    public static final String MAJOR_REVISION_NUM = VERSION_NUM;
     // incremented for minor changes to the implementation
     public static final String MINOR_REVISION_NUM = "0";
     // incremented for releases containing an immediate bug fix.
     public static final String BUGFIX_REVISION_NUM = "0";
 
-    public static final String RELEASE_VERSION = VERSION_NUM + "." + MAJOR_REVISION_NUM + "." + MINOR_REVISION_NUM
+    public static final String RELEASE_VERSION = MAJOR_REVISION_NUM + "." + MINOR_REVISION_NUM
             + "." + BUGFIX_REVISION_NUM;
 
     public static final String USER_AGENT = "AwsSecretCache/" + RELEASE_VERSION;
 
-    private VersionInfo(){}
+    private VersionInfo() {
+    }
 }

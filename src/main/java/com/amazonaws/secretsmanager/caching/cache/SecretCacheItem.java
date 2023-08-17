@@ -13,15 +13,16 @@
 
 package com.amazonaws.secretsmanager.caching.cache;
 
-import com.amazonaws.services.secretsmanager.AWSSecretsManager;
-import com.amazonaws.services.secretsmanager.model.DescribeSecretRequest;
-import com.amazonaws.services.secretsmanager.model.DescribeSecretResult;
-import com.amazonaws.services.secretsmanager.model.GetSecretValueResult;
-import com.amazonaws.secretsmanager.caching.SecretCacheConfiguration;
-
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
+
+import com.amazonaws.secretsmanager.caching.SecretCacheConfiguration;
+
+import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
+import software.amazon.awssdk.services.secretsmanager.model.DescribeSecretRequest;
+import software.amazon.awssdk.services.secretsmanager.model.DescribeSecretResponse;
+import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueResponse;
 
 /**
  * The cached secret item which contains information from the DescribeSecret
@@ -29,7 +30,7 @@ import java.util.concurrent.ThreadLocalRandom;
  * results.
  *
  */
-public class SecretCacheItem extends SecretCacheObject<DescribeSecretResult> {
+public class SecretCacheItem extends SecretCacheObject<DescribeSecretResponse> {
 
     /** The cached secret value versions for this cached secret. */
     private LRUCache<String, SecretCacheVersion> versions = new LRUCache<String, SecretCacheVersion>(10);
@@ -52,7 +53,7 @@ public class SecretCacheItem extends SecretCacheObject<DescribeSecretResult> {
      *            Cache configuration.
      */
     public SecretCacheItem(final String secretId,
-                           final AWSSecretsManager client,
+                           final SecretsManagerClient client,
                            final SecretCacheConfiguration config) {
         super(secretId, client, config);
     }
@@ -98,28 +99,26 @@ public class SecretCacheItem extends SecretCacheObject<DescribeSecretResult> {
      * @return The result from AWS Secrets Manager for the refresh.
      */
     @Override
-    protected DescribeSecretResult executeRefresh() {
-        DescribeSecretResult describeSecretResult = client.describeSecret(
-                updateUserAgent(new DescribeSecretRequest()
-                        .withSecretId(this.secretId)));
+    protected DescribeSecretResponse executeRefresh() {
+        DescribeSecretResponse describeSecretResponse = client.describeSecret(DescribeSecretRequest.builder().secretId(this.secretId).build());
         long ttl = this.config.getCacheItemTTL();
         this.nextRefreshTime = System.currentTimeMillis() +
                 ThreadLocalRandom.current().nextLong(ttl / 2,ttl + 1) ;
 
-        return describeSecretResult;
+        return describeSecretResponse;
     }
 
     /**
      * Return the secret version based on the current state of the secret.
      *
-     * @param describeResult
+     * @param describeResponse
      *            The result of the Describe Secret request to AWS Secrets Manager.
      * @return The cached secret version.
      */
-    private SecretCacheVersion getVersion(DescribeSecretResult describeResult) {
-        if (null == describeResult) { return null; }
-        if (null == describeResult.getVersionIdsToStages()) { return null; }
-        Optional<String> currentVersionId = describeResult.getVersionIdsToStages().entrySet()
+    private SecretCacheVersion getVersion(DescribeSecretResponse describeResponse) {
+        if (null == describeResponse) { return null; }
+        if (null == describeResponse.versionIdsToStages()) { return null; }
+        Optional<String> currentVersionId = describeResponse.versionIdsToStages().entrySet()
                 .stream()
                 .filter(Objects::nonNull)
                 .filter(x -> x.getValue() != null)
@@ -141,13 +140,13 @@ public class SecretCacheItem extends SecretCacheObject<DescribeSecretResult> {
     /**
      * Return the cached result from AWS Secrets Manager for GetSecretValue.
      *
-     * @param describeResult
+     * @param describeResponse
      *            The result of the Describe Secret request to AWS Secrets Manager.
      * @return The cached GetSecretValue result.
      */
     @Override
-    protected GetSecretValueResult getSecretValue(DescribeSecretResult describeResult) {
-        SecretCacheVersion version = getVersion(describeResult);
+    protected GetSecretValueResponse getSecretValue(DescribeSecretResponse describeResponse) {
+        SecretCacheVersion version = getVersion(describeResponse);
         if (null == version) { return null; }
         return version.getSecretValue();
     }

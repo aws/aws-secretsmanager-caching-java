@@ -13,8 +13,8 @@
 
 package com.amazonaws.secretsmanager.caching.cache;
 
-import org.testng.annotations.Test;
 import org.testng.Assert;
+import org.testng.annotations.Test;
 
 public class SecretCacheItemTest {
     @Test
