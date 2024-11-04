@@ -16,7 +16,7 @@ package com.amazonaws.secretsmanager.caching.cache;
 import java.util.concurrent.ThreadLocalRandom;
 
 import com.amazonaws.secretsmanager.caching.SecretCacheConfiguration;
-
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueResponse;
 
@@ -92,6 +92,7 @@ public abstract class SecretCacheObject<T> {
      * @param config
      *            The secret cache configuration.
      */
+    @SuppressFBWarnings(value = "EI_EXPOSE_REP2")
     public SecretCacheObject(final String secretId,
                              final SecretsManagerClient client,
                              final SecretCacheConfiguration config) {

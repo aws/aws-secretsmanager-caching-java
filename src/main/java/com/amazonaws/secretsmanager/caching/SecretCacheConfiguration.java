@@ -15,6 +15,7 @@ package com.amazonaws.secretsmanager.caching;
 
 import java.util.concurrent.TimeUnit;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 
 
@@ -71,6 +72,7 @@ public class SecretCacheConfiguration {
      *
      * @return The AWS Secrets Manager client.
      */
+    @SuppressFBWarnings(value = "EI_EXPOSE_REP")
     public SecretsManagerClient getClient() {
         return client;
     }
@@ -83,6 +85,7 @@ public class SecretCacheConfiguration {
      * @param client
      *            The AWS Secrets Manager client.
      */
+    @SuppressFBWarnings(value = "EI_EXPOSE_REP2")
     public void setClient(SecretsManagerClient client) {
         this.client = client;
     }
@@ -106,6 +109,7 @@ public class SecretCacheConfiguration {
      *
      * @return The object used to hook in-memory cache updates.
      */
+    @SuppressFBWarnings(value = "EI_EXPOSE_REP")
     public SecretCacheHook getCacheHook() {
         return cacheHook;
     }
@@ -117,6 +121,7 @@ public class SecretCacheConfiguration {
      * @param cacheHook
      *            The interface used to hook the in-memory cache.
      */
+    @SuppressFBWarnings(value = "EI_EXPOSE_REP2")
     public void setCacheHook(SecretCacheHook cacheHook) {
         this.cacheHook = cacheHook;
     }
