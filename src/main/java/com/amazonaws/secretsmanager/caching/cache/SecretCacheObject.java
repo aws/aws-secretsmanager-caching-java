@@ -14,6 +14,7 @@
 package com.amazonaws.secretsmanager.caching.cache;
 
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.locks.ReentrantLock;
 
 import com.amazonaws.secretsmanager.caching.SecretCacheConfiguration;
 
@@ -48,7 +49,7 @@ public abstract class SecretCacheObject<T> {
     protected final String secretId;
 
     /** A private object to synchronize access to certain methods. */
-    protected final Object lock = new Object();
+    private final ReentrantLock lock = new ReentrantLock();
 
     /** The AWS Secrets Manager client to use for requesting secrets. */
     protected final SecretsManagerClient client;
@@ -229,9 +230,12 @@ public abstract class SecretCacheObject<T> {
         Thread.sleep(sleep);
 
         // Perform the requested refresh
-        synchronized (lock) {
+        lock.lock();
+        try {
             refresh();
             return (null == this.exception);
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -241,13 +245,16 @@ public abstract class SecretCacheObject<T> {
      * @return The cached GetSecretValue result.
      */
     public GetSecretValueResponse getSecretValue() {
-        synchronized (lock) {
+        lock.lock();
+        try {
             refresh();
             if (null == this.data) {
                 if (null != this.exception) { throw this.exception; }
             }
 
             return this.getSecretValue(this.getResult());
+        } finally {
+            lock.unlock();
         }
     }
 
