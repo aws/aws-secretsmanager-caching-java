@@ -111,6 +111,17 @@ public abstract class SecretCacheObject<T> {
      */
     protected abstract GetSecretValueResponse getSecretValue(T result);
 
+    /**
+     * Execute the actual refresh of the cached secret state.
+     *
+     * @param result the GetSecretValue or DescribeSecret result.
+     * @param versionId the version ID of the desired secret (optional, can be <c>null</c>).
+     * @param versionStage the version stage of the desired secret (optional, can be <c>null</c>).
+     *
+     * @return The cached GetSecretValue result based on the current cached state.
+     */
+    protected abstract GetSecretValueResponse getSecretValue(T result, String versionId, String versionStage);;
+
     public abstract boolean equals(Object obj);
     public abstract int hashCode();
     public abstract String toString();
@@ -243,6 +254,28 @@ public abstract class SecretCacheObject<T> {
             }
 
             return this.getSecretValue(this.getResult());
+        }
+    }
+
+    /**
+     * Return the cached GetSecretValue result.
+     *
+     * @param versionId the version ID of the desired secret (optional, can be <c>null</c>).
+     * @param versionStage the version stage of the desired secret (optional, can be <c>null</c>).
+     *
+     * @return The cached GetSecretValue result.
+     */
+    public GetSecretValueResponse getSecretValue(String versionId, String versionStage) {
+        synchronized (lock) {
+            refresh();
+
+            if (this.data == null) {
+                if (this.exception != null) {
+                    throw this.exception;
+                }
+            }
+
+            return this.getSecretValue(this.getResult(), versionId, versionStage);
         }
     }
 

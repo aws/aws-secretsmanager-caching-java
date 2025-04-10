@@ -98,4 +98,18 @@ public class SecretCacheVersion extends SecretCacheObject<GetSecretValueResponse
         return gsvResult;
     }
 
+    /**
+     * Return the cached GetSecretValue result.
+     *
+     * @param gsvResult the GetSecretValue or DescribeSecret result.
+     * @param versionId the version ID of the desired secret (optional, can be <c>null</c>).
+     * @param versionStage the version stage of the desired secret (optional, can be <c>null</c>).
+     *
+     * @return The cached GetSecretValue result.
+     */
+    @Override
+    protected GetSecretValueResponse getSecretValue(GetSecretValueResponse gsvResult, String versionId, String versionStage) {
+        return gsvResult;
+    }
+
 }

@@ -137,6 +137,26 @@ public class SecretCache implements AutoCloseable {
     }
 
     /**
+     * Retrieve and cache a secret string from AWS Secrets Manager.
+     *
+     * @param secretId the secret ID of the desired secret.
+     * @param versionId the version ID of the desired secret (optional, can be <c>null</c>).
+     * @param versionStage the version stage of the desired secret (optional, can be <c>null</c>).
+     *
+     * @return The secret string for the desired secret.
+     */
+    public String getSecretString(final String secretId, final String versionId, final String versionStage) {
+        SecretCacheItem secret = this.getCachedSecret(secretId);
+        GetSecretValueResponse gsv = secret.getSecretValue(versionId, versionStage);
+
+        if (gsv == null) {
+            return null;
+        }
+
+        return gsv.secretString();
+    }
+
+    /**
      * Method to retrieve a binary secret from AWS Secrets Manager.
      *
      * @param secretId The identifier for the secret being requested.
@@ -148,6 +168,26 @@ public class SecretCache implements AutoCloseable {
         if (null == gsv) {
             return null;
         }
+        return gsv.secretBinary().asByteBuffer();
+    }
+
+    /**
+     * Retrieve and cache a secret binary from AWS Secrets Manager.
+     *
+     * @param secretId the secret ID of the desired secret.
+     * @param versionId the version ID of the desired secret (optional, can be <c>null</c>).
+     * @param versionStage the version stage of the desired secret (optional, can be <c>null</c>).
+     *
+     * @return The secret binary for the desired secret.
+     */
+    public ByteBuffer getSecretBinary(final String secretId, final String versionId, final String versionStage) {
+        SecretCacheItem secret = this.getCachedSecret(secretId);
+        GetSecretValueResponse gsv = secret.getSecretValue(versionId, versionStage);
+
+        if (gsv == null) {
+            return null;
+        }
+
         return gsv.secretBinary().asByteBuffer();
     }
 
