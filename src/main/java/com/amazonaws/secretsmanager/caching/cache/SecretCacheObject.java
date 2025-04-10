@@ -120,7 +120,7 @@ public abstract class SecretCacheObject<T> {
      *
      * @return The cached GetSecretValue result based on the current cached state.
      */
-    protected abstract GetSecretValueResponse getSecretValue(T result, String versionId, String versionStage);;
+    protected abstract GetSecretValueResponse getSecretValue(T result, String versionId, String versionStage);
 
     public abstract boolean equals(Object obj);
     public abstract int hashCode();
