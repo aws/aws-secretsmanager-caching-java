@@ -132,7 +132,7 @@ public class SecretCacheItem extends SecretCacheObject<DescribeSecretResponse> {
                 continue;
             }
 
-            if (versionId != null && entry.getKey() == versionId) {
+            if (versionId != null && versionId.equals(entry.getKey())) {
                 currentVersionId = Optional.of(versionId);
                 break;
             }
@@ -174,8 +174,8 @@ public class SecretCacheItem extends SecretCacheObject<DescribeSecretResponse> {
      * Return the cached GetSecretValue result.
      *
      * @param describeResponse the DescribeSecret result.
-     * @param versionId the version ID of the desired secret (optional, can be <c>null</c>).
-     * @param versionStage the version stage of the desired secret (optional, can be <c>null</c>).
+     * @param versionId the version ID of the desired secret (optional, can be null).
+     * @param versionStage the version stage of the desired secret (optional, can be null).
      *
      * @return The cached GetSecretValue result.
      */

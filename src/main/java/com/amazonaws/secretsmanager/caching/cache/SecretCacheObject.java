@@ -115,8 +115,8 @@ public abstract class SecretCacheObject<T> {
      * Execute the actual refresh of the cached secret state.
      *
      * @param result the GetSecretValue or DescribeSecret result.
-     * @param versionId the version ID of the desired secret (optional, can be <c>null</c>).
-     * @param versionStage the version stage of the desired secret (optional, can be <c>null</c>).
+     * @param versionId the version ID of the desired secret (optional, can be null).
+     * @param versionStage the version stage of the desired secret (optional, can be null).
      *
      * @return The cached GetSecretValue result based on the current cached state.
      */
@@ -260,8 +260,8 @@ public abstract class SecretCacheObject<T> {
     /**
      * Return the cached GetSecretValue result.
      *
-     * @param versionId the version ID of the desired secret (optional, can be <c>null</c>).
-     * @param versionStage the version stage of the desired secret (optional, can be <c>null</c>).
+     * @param versionId the version ID of the desired secret (optional, can be null).
+     * @param versionStage the version stage of the desired secret (optional, can be null).
      *
      * @return The cached GetSecretValue result.
      */

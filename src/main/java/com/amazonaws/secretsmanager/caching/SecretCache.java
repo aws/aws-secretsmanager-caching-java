@@ -140,8 +140,8 @@ public class SecretCache implements AutoCloseable {
      * Retrieve and cache a secret string from AWS Secrets Manager.
      *
      * @param secretId the secret ID of the desired secret.
-     * @param versionId the version ID of the desired secret (optional, can be <c>null</c>).
-     * @param versionStage the version stage of the desired secret (optional, can be <c>null</c>).
+     * @param versionId the version ID of the desired secret (optional, can be null).
+     * @param versionStage the version stage of the desired secret (optional, can be null).
      *
      * @return The secret string for the desired secret.
      */
@@ -175,8 +175,8 @@ public class SecretCache implements AutoCloseable {
      * Retrieve and cache a secret binary from AWS Secrets Manager.
      *
      * @param secretId the secret ID of the desired secret.
-     * @param versionId the version ID of the desired secret (optional, can be <c>null</c>).
-     * @param versionStage the version stage of the desired secret (optional, can be <c>null</c>).
+     * @param versionId the version ID of the desired secret (optional, can be null).
+     * @param versionStage the version stage of the desired secret (optional, can be null).
      *
      * @return The secret binary for the desired secret.
      */
