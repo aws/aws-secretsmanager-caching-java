@@ -247,14 +247,7 @@ public abstract class SecretCacheObject<T> {
      * @return The cached GetSecretValue result.
      */
     public GetSecretValueResponse getSecretValue() {
-        synchronized (lock) {
-            refresh();
-            if (null == this.data) {
-                if (null != this.exception) { throw this.exception; }
-            }
-
-            return this.getSecretValue(this.getResult());
-        }
+        return getSecretValue(null, null);
     }
 
     /**

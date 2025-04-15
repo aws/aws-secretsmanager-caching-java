@@ -128,12 +128,7 @@ public class SecretCache implements AutoCloseable {
      * @return The string secret
      */
     public String getSecretString(final String secretId) {
-        SecretCacheItem secret = this.getCachedSecret(secretId);
-        GetSecretValueResponse gsv = secret.getSecretValue();
-        if (null == gsv) {
-            return null;
-        }
-        return gsv.secretString();
+        return getSecretString(secretId, null, null);
     }
 
     /**
@@ -163,12 +158,7 @@ public class SecretCache implements AutoCloseable {
      * @return The binary secret
      */
     public ByteBuffer getSecretBinary(final String secretId) {
-        SecretCacheItem secret = this.getCachedSecret(secretId);
-        GetSecretValueResponse gsv = secret.getSecretValue();
-        if (null == gsv) {
-            return null;
-        }
-        return gsv.secretBinary().asByteBuffer();
+        return getSecretBinary(secretId, null, null);
     }
 
     /**

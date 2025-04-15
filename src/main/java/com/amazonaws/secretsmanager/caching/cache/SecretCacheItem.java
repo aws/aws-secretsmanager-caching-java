@@ -165,9 +165,7 @@ public class SecretCacheItem extends SecretCacheObject<DescribeSecretResponse> {
      */
     @Override
     protected GetSecretValueResponse getSecretValue(DescribeSecretResponse describeResponse) {
-        SecretCacheVersion version = getVersion(describeResponse, null, null);
-        if (null == version) { return null; }
-        return version.getSecretValue();
+        return getSecretValue(describeResponse, null, null);
     }
 
     /**
