@@ -20,7 +20,7 @@ jobs:
         with:
           java-version: 21
           distribution: corretto
-          cache: mave
+          cache: maven
 
       - name: Prettier
         uses: rutajdash/prettier-cli-action@v1.0.2
