@@ -13,8 +13,8 @@
 
 package com.amazonaws.secretsmanager.caching.cache;
 
-import java.util.Map;
 import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * An LRU cache based on the Java LinkedHashMap.
@@ -201,5 +201,4 @@ public class LRUCache<K, V> {
             map.clear();
         }
     }
-
 }

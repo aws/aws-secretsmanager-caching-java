@@ -12,12 +12,10 @@
  */
 package com.amazonaws.secretsmanager.caching;
 
-import java.nio.ByteBuffer;
-
 import com.amazonaws.secretsmanager.caching.cache.LRUCache;
 import com.amazonaws.secretsmanager.caching.cache.SecretCacheItem;
 import com.amazonaws.secretsmanager.caching.cache.internal.VersionInfo;
-
+import java.nio.ByteBuffer;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
@@ -70,12 +68,11 @@ public class SecretCache implements AutoCloseable {
      *                client.
      */
     public SecretCache(SecretsManagerClientBuilder builder) {
-        this(new SecretCacheConfiguration().withClient(builder
-                .overrideConfiguration(
-                        builder.overrideConfiguration().toBuilder()
+        this(new SecretCacheConfiguration()
+                .withClient(builder.overrideConfiguration(builder.overrideConfiguration().toBuilder()
                                 .putAdvancedOption(SdkAdvancedClientOption.USER_AGENT_SUFFIX, VersionInfo.USER_AGENT)
                                 .build())
-                .build()));
+                        .build()));
     }
 
     /**
@@ -100,9 +97,13 @@ public class SecretCache implements AutoCloseable {
         this.cache = new LRUCache<String, SecretCacheItem>(config.getMaxCacheSize());
         this.config = config;
         ClientOverrideConfiguration defaultOverride = ClientOverrideConfiguration.builder()
-                .putAdvancedOption(SdkAdvancedClientOption.USER_AGENT_SUFFIX, VersionInfo.USER_AGENT).build();
-        this.client = config.getClient() != null ? config.getClient()
-                : SecretsManagerClient.builder().overrideConfiguration(defaultOverride).build();
+                .putAdvancedOption(SdkAdvancedClientOption.USER_AGENT_SUFFIX, VersionInfo.USER_AGENT)
+                .build();
+        this.client = config.getClient() != null
+                ? config.getClient()
+                : SecretsManagerClient.builder()
+                        .overrideConfiguration(defaultOverride)
+                        .build();
     }
 
     /**
@@ -114,8 +115,7 @@ public class SecretCache implements AutoCloseable {
     private SecretCacheItem getCachedSecret(final String secretId) {
         SecretCacheItem secret = this.cache.get(secretId);
         if (null == secret) {
-            this.cache.putIfAbsent(secretId,
-                    new SecretCacheItem(secretId, this.client, this.config));
+            this.cache.putIfAbsent(secretId, new SecretCacheItem(secretId, this.client, this.config));
             secret = this.cache.get(secretId);
         }
         return secret;
@@ -171,5 +171,4 @@ public class SecretCache implements AutoCloseable {
     public void close() {
         this.cache.clear();
     }
-
 }

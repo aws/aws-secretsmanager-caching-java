@@ -13,12 +13,10 @@
 
 package com.amazonaws.secretsmanager.caching.cache;
 
+import com.amazonaws.secretsmanager.caching.SecretCacheConfiguration;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
-
-import com.amazonaws.secretsmanager.caching.SecretCacheConfiguration;
-
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 import software.amazon.awssdk.services.secretsmanager.model.DescribeSecretRequest;
 import software.amazon.awssdk.services.secretsmanager.model.DescribeSecretResponse;
@@ -52,16 +50,15 @@ public class SecretCacheItem extends SecretCacheObject<DescribeSecretResponse> {
      * @param config
      *            Cache configuration.
      */
-    public SecretCacheItem(final String secretId,
-                           final SecretsManagerClient client,
-                           final SecretCacheConfiguration config) {
+    public SecretCacheItem(
+            final String secretId, final SecretsManagerClient client, final SecretCacheConfiguration config) {
         super(secretId, client, config);
     }
 
     @Override
     public boolean equals(Object obj) {
         if (obj instanceof SecretCacheItem) {
-            return Objects.equals(this.secretId, ((SecretCacheItem)obj).secretId);
+            return Objects.equals(this.secretId, ((SecretCacheItem) obj).secretId);
         }
         return false;
     }
@@ -85,8 +82,12 @@ public class SecretCacheItem extends SecretCacheObject<DescribeSecretResponse> {
      */
     @Override
     protected boolean isRefreshNeeded() {
-        if (super.isRefreshNeeded()) { return true; }
-        if (null != this.exception) { return false; }
+        if (super.isRefreshNeeded()) {
+            return true;
+        }
+        if (null != this.exception) {
+            return false;
+        }
         if (System.currentTimeMillis() >= this.nextRefreshTime) {
             return true;
         }
@@ -100,10 +101,11 @@ public class SecretCacheItem extends SecretCacheObject<DescribeSecretResponse> {
      */
     @Override
     protected DescribeSecretResponse executeRefresh() {
-        DescribeSecretResponse describeSecretResponse = client.describeSecret(DescribeSecretRequest.builder().secretId(this.secretId).build());
+        DescribeSecretResponse describeSecretResponse = client.describeSecret(
+                DescribeSecretRequest.builder().secretId(this.secretId).build());
         long ttl = this.config.getCacheItemTTL();
-        this.nextRefreshTime = System.currentTimeMillis() +
-                ThreadLocalRandom.current().nextLong(ttl / 2,ttl + 1) ;
+        this.nextRefreshTime =
+                System.currentTimeMillis() + ThreadLocalRandom.current().nextLong(ttl / 2, ttl + 1);
 
         return describeSecretResponse;
     }
@@ -116,10 +118,13 @@ public class SecretCacheItem extends SecretCacheObject<DescribeSecretResponse> {
      * @return The cached secret version.
      */
     private SecretCacheVersion getVersion(DescribeSecretResponse describeResponse) {
-        if (null == describeResponse) { return null; }
-        if (null == describeResponse.versionIdsToStages()) { return null; }
-        Optional<String> currentVersionId = describeResponse.versionIdsToStages().entrySet()
-                .stream()
+        if (null == describeResponse) {
+            return null;
+        }
+        if (null == describeResponse.versionIdsToStages()) {
+            return null;
+        }
+        Optional<String> currentVersionId = describeResponse.versionIdsToStages().entrySet().stream()
                 .filter(Objects::nonNull)
                 .filter(x -> x.getValue() != null)
                 .filter(x -> x.getValue().contains(this.config.getVersionStage()))
@@ -128,7 +133,8 @@ public class SecretCacheItem extends SecretCacheObject<DescribeSecretResponse> {
         if (currentVersionId.isPresent()) {
             SecretCacheVersion version = versions.get(currentVersionId.get());
             if (null == version) {
-                versions.putIfAbsent(currentVersionId.get(),
+                versions.putIfAbsent(
+                        currentVersionId.get(),
                         new SecretCacheVersion(this.secretId, currentVersionId.get(), this.client, this.config));
                 version = versions.get(currentVersionId.get());
             }
@@ -147,8 +153,9 @@ public class SecretCacheItem extends SecretCacheObject<DescribeSecretResponse> {
     @Override
     protected GetSecretValueResponse getSecretValue(DescribeSecretResponse describeResponse) {
         SecretCacheVersion version = getVersion(describeResponse);
-        if (null == version) { return null; }
+        if (null == version) {
+            return null;
+        }
         return version.getSecretValue();
     }
-
 }

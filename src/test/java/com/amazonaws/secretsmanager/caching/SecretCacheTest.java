@@ -21,7 +21,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.IntConsumer;
-
 import org.mockito.ArgumentMatcher;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
@@ -30,7 +29,6 @@ import org.mockito.MockitoAnnotations;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
-
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClientBuilder;
@@ -50,8 +48,8 @@ public class SecretCacheTest {
     @Mock
     private DescribeSecretResponse describeSecretResponse;
 
-    private GetSecretValueResponse getSecretValueResponse = GetSecretValueResponse.builder()
-            .versionStages(Arrays.asList("v1")).build();
+    private GetSecretValueResponse getSecretValueResponse =
+            GetSecretValueResponse.builder().versionStages(Arrays.asList("v1")).build();
 
     @Mock
     private SecretCacheConfiguration secretCacheConfiguration;
@@ -114,12 +112,15 @@ public class SecretCacheTest {
         Map<String, List<String>> versionMap = new HashMap<String, List<String>>();
         versionMap.put("versionId", Arrays.asList("AWSCURRENT"));
         Mockito.when(describeSecretResponse.versionIdsToStages()).thenReturn(versionMap);
-        GetSecretValueResponse.Builder resBuilder = GetSecretValueResponse.builder().secretString(secret)
+        GetSecretValueResponse.Builder resBuilder = GetSecretValueResponse.builder()
+                .secretString(secret)
                 .secretBinary(SdkBytes.fromByteArray(secret.getBytes()));
         getSecretValueResponse = resBuilder.build();
 
-        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class))).thenReturn(describeSecretResponse);
-        Mockito.when(asm.getSecretValue(Mockito.any(GetSecretValueRequest.class))).thenReturn(getSecretValueResponse);
+        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class)))
+                .thenReturn(describeSecretResponse);
+        Mockito.when(asm.getSecretValue(Mockito.any(GetSecretValueRequest.class)))
+                .thenReturn(getSecretValueResponse);
 
         SecretCache sc = new SecretCache(asm);
 
@@ -130,8 +131,7 @@ public class SecretCacheTest {
         Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any(DescribeSecretRequest.class));
         Mockito.verify(asm, Mockito.times(1)).getSecretValue(Mockito.any(GetSecretValueRequest.class));
 
-        repeat(10, n -> Assert.assertEquals(sc.getSecretBinary(""),
-                ByteBuffer.wrap(secret.getBytes())));
+        repeat(10, n -> Assert.assertEquals(sc.getSecretBinary(""), ByteBuffer.wrap(secret.getBytes())));
         sc.close();
     }
 
@@ -142,12 +142,15 @@ public class SecretCacheTest {
         versionMap.put("versionId", Arrays.asList("AWSCURRENT"));
         Mockito.when(describeSecretResponse.versionIdsToStages()).thenReturn(versionMap);
 
-        GetSecretValueResponse.Builder resBuilder = GetSecretValueResponse.builder().secretString(secret)
+        GetSecretValueResponse.Builder resBuilder = GetSecretValueResponse.builder()
+                .secretString(secret)
                 .secretBinary(SdkBytes.fromByteArray(secret.getBytes()));
         getSecretValueResponse = resBuilder.build();
 
-        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class))).thenReturn(describeSecretResponse);
-        Mockito.when(asm.getSecretValue(Mockito.any(GetSecretValueRequest.class))).thenReturn(getSecretValueResponse);
+        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class)))
+                .thenReturn(describeSecretResponse);
+        Mockito.when(asm.getSecretValue(Mockito.any(GetSecretValueRequest.class)))
+                .thenReturn(getSecretValueResponse);
         class Hook implements SecretCacheHook {
             private HashMap<Integer, Object> map = new HashMap<Integer, Object>();
 
@@ -166,9 +169,8 @@ public class SecretCacheTest {
             }
         }
         Hook hook = new Hook();
-        SecretCache sc = new SecretCache(new SecretCacheConfiguration()
-                .withClient(asm)
-                .withCacheHook(hook));
+        SecretCache sc =
+                new SecretCache(new SecretCacheConfiguration().withClient(asm).withCacheHook(hook));
 
         // Request the secret multiple times and verify the correct result
         repeat(10, n -> Assert.assertEquals(sc.getSecretString(""), secret));
@@ -177,8 +179,7 @@ public class SecretCacheTest {
         Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any(DescribeSecretRequest.class));
         Mockito.verify(asm, Mockito.times(1)).getSecretValue(Mockito.any(GetSecretValueRequest.class));
 
-        repeat(10, n -> Assert.assertEquals(sc.getSecretBinary(""),
-                ByteBuffer.wrap(secret.getBytes())));
+        repeat(10, n -> Assert.assertEquals(sc.getSecretBinary(""), ByteBuffer.wrap(secret.getBytes())));
         Assert.assertEquals(hook.getCount(), 2);
         sc.close();
     }
@@ -189,12 +190,16 @@ public class SecretCacheTest {
         Map<String, List<String>> versionMap = new HashMap<String, List<String>>();
         versionMap.put("versionId", Arrays.asList("AWSCURRENT"));
         Mockito.when(describeSecretResponse.versionIdsToStages()).thenReturn(versionMap);
-        GetSecretValueResponse.Builder resBuilder = GetSecretValueResponse.builder().secretString(secret)
-                .secretBinary(SdkBytes.fromByteArray(secret.getBytes())).versionStages((Collection<String>) null);
+        GetSecretValueResponse.Builder resBuilder = GetSecretValueResponse.builder()
+                .secretString(secret)
+                .secretBinary(SdkBytes.fromByteArray(secret.getBytes()))
+                .versionStages((Collection<String>) null);
         getSecretValueResponse = resBuilder.build();
 
-        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class))).thenReturn(describeSecretResponse);
-        Mockito.when(asm.getSecretValue(Mockito.any(GetSecretValueRequest.class))).thenReturn(getSecretValueResponse);
+        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class)))
+                .thenReturn(describeSecretResponse);
+        Mockito.when(asm.getSecretValue(Mockito.any(GetSecretValueRequest.class)))
+                .thenReturn(getSecretValueResponse);
         SecretCache sc = new SecretCache(asm);
 
         // Request the secret multiple times and verify the correct result
@@ -204,8 +209,7 @@ public class SecretCacheTest {
         Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any(DescribeSecretRequest.class));
         Mockito.verify(asm, Mockito.times(1)).getSecretValue(Mockito.any(GetSecretValueRequest.class));
 
-        repeat(10, n -> Assert.assertEquals(sc.getSecretBinary(""),
-                ByteBuffer.wrap(secret.getBytes())));
+        repeat(10, n -> Assert.assertEquals(sc.getSecretBinary(""), ByteBuffer.wrap(secret.getBytes())));
         sc.close();
     }
 
@@ -216,12 +220,15 @@ public class SecretCacheTest {
         versionMap.put("versionId", Arrays.asList("AWSCURRENT"));
         Mockito.when(describeSecretResponse.versionIdsToStages()).thenReturn(versionMap);
 
-        GetSecretValueResponse.Builder resBuilder = GetSecretValueResponse.builder().secretString(secret)
+        GetSecretValueResponse.Builder resBuilder = GetSecretValueResponse.builder()
+                .secretString(secret)
                 .secretBinary(SdkBytes.fromByteArray(secret.getBytes()));
         getSecretValueResponse = resBuilder.build();
 
-        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class))).thenReturn(describeSecretResponse);
-        Mockito.when(asm.getSecretValue(Mockito.any(GetSecretValueRequest.class))).thenReturn(getSecretValueResponse);
+        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class)))
+                .thenReturn(describeSecretResponse);
+        Mockito.when(asm.getSecretValue(Mockito.any(GetSecretValueRequest.class)))
+                .thenReturn(getSecretValueResponse);
         SecretCache sc = new SecretCache(asm);
 
         // Request the secret multiple times and verify the correct result
@@ -251,16 +258,22 @@ public class SecretCacheTest {
         versionMap.put("versionId", Arrays.asList("AWSCURRENT"));
         Mockito.when(describeSecretResponse.versionIdsToStages()).thenReturn(versionMap);
 
-        GetSecretValueResponse diff = GetSecretValueResponse.builder().secretBinary(SdkBytes.fromByteBuffer(buffer))
+        GetSecretValueResponse diff = GetSecretValueResponse.builder()
+                .secretBinary(SdkBytes.fromByteBuffer(buffer))
                 .build();
 
-        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class))).thenReturn(describeSecretResponse);
-        Mockito.when(asm.getSecretValue(Mockito.any(GetSecretValueRequest.class))).thenReturn(diff);
+        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class)))
+                .thenReturn(describeSecretResponse);
+        Mockito.when(asm.getSecretValue(Mockito.any(GetSecretValueRequest.class)))
+                .thenReturn(diff);
 
         SecretCache sc = new SecretCache(asm);
 
         // Request the secret multiple times and verify the correct result
-        repeat(10, n -> Assert.assertEquals(StandardCharsets.UTF_8.decode(sc.getSecretBinary("")).toString(), secret));
+        repeat(
+                10,
+                n -> Assert.assertEquals(
+                        StandardCharsets.UTF_8.decode(sc.getSecretBinary("")).toString(), secret));
 
         // Verify that multiple requests did not call the API
         Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any(DescribeSecretRequest.class));
@@ -277,31 +290,36 @@ public class SecretCacheTest {
         Map<String, List<String>> versionMap = new HashMap<String, List<String>>();
         versionMap.put("versionId", Arrays.asList("AWSCURRENT"));
         Mockito.when(describeSecretResponse.versionIdsToStages()).thenReturn(versionMap);
-        getSecretValueResponse = GetSecretValueResponse.builder().secretString(secretA).build();
+        getSecretValueResponse =
+                GetSecretValueResponse.builder().secretString(secretA).build();
 
-        GetSecretValueResponse res2 = GetSecretValueResponse.builder().secretString(secretB).build();
+        GetSecretValueResponse res2 =
+                GetSecretValueResponse.builder().secretString(secretB).build();
 
-        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class))).thenReturn(describeSecretResponse);
-
-        Mockito.when(asm.getSecretValue(ArgumentMatchers.argThat(new ArgumentMatcher<GetSecretValueRequest>() {
-            @Override
-            public boolean matches(GetSecretValueRequest argument) {
-                if (argument == null) {
-                    return false;
-                }
-                return argument.secretId().equals("SecretA");
-            }
-        }))).thenReturn(getSecretValueResponse);
+        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class)))
+                .thenReturn(describeSecretResponse);
 
         Mockito.when(asm.getSecretValue(ArgumentMatchers.argThat(new ArgumentMatcher<GetSecretValueRequest>() {
-            @Override
-            public boolean matches(GetSecretValueRequest argument) {
-                if (argument == null) {
-                    return false;
-                }
-                return argument.secretId().equals("SecretB");
-            }
-        }))).thenReturn(res2);
+                    @Override
+                    public boolean matches(GetSecretValueRequest argument) {
+                        if (argument == null) {
+                            return false;
+                        }
+                        return argument.secretId().equals("SecretA");
+                    }
+                })))
+                .thenReturn(getSecretValueResponse);
+
+        Mockito.when(asm.getSecretValue(ArgumentMatchers.argThat(new ArgumentMatcher<GetSecretValueRequest>() {
+                    @Override
+                    public boolean matches(GetSecretValueRequest argument) {
+                        if (argument == null) {
+                            return false;
+                        }
+                        return argument.secretId().equals("SecretB");
+                    }
+                })))
+                .thenReturn(res2);
 
         SecretCache sc = new SecretCache(asm);
 
@@ -321,14 +339,16 @@ public class SecretCacheTest {
         Map<String, List<String>> versionMap = new HashMap<String, List<String>>();
         versionMap.put("versionId", Arrays.asList("AWSCURRENT"));
         Mockito.when(describeSecretResponse.versionIdsToStages()).thenReturn(versionMap);
-        getSecretValueResponse = GetSecretValueResponse.builder().secretString(secret).build();
+        getSecretValueResponse =
+                GetSecretValueResponse.builder().secretString(secret).build();
 
-        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class))).thenReturn(describeSecretResponse);
-        Mockito.when(asm.getSecretValue(Mockito.any(GetSecretValueRequest.class))).thenReturn(getSecretValueResponse);
+        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class)))
+                .thenReturn(describeSecretResponse);
+        Mockito.when(asm.getSecretValue(Mockito.any(GetSecretValueRequest.class)))
+                .thenReturn(getSecretValueResponse);
 
-        SecretCache sc = new SecretCache(new SecretCacheConfiguration()
-                .withClient(asm)
-                .withCacheItemTTL(500));
+        SecretCache sc =
+                new SecretCache(new SecretCacheConfiguration().withClient(asm).withCacheItemTTL(500));
 
         // Request the secret multiple times and verify the correct result
         repeat(10, n -> Assert.assertEquals(sc.getSecretString(""), secret));
@@ -352,13 +372,15 @@ public class SecretCacheTest {
         versionMap.put("versionId", Arrays.asList("AWSCURRENT"));
         Mockito.when(describeSecretResponse.versionIdsToStages()).thenReturn(versionMap);
 
-        getSecretValueResponse = GetSecretValueResponse.builder().secretString(secret).build();
+        getSecretValueResponse =
+                GetSecretValueResponse.builder().secretString(secret).build();
 
-        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class))).thenReturn(describeSecretResponse);
-        Mockito.when(asm.getSecretValue(Mockito.any(GetSecretValueRequest.class))).thenReturn(getSecretValueResponse);
-        SecretCache sc = new SecretCache(new SecretCacheConfiguration()
-                .withClient(asm)
-                .withCacheItemTTL(500));
+        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class)))
+                .thenReturn(describeSecretResponse);
+        Mockito.when(asm.getSecretValue(Mockito.any(GetSecretValueRequest.class)))
+                .thenReturn(getSecretValueResponse);
+        SecretCache sc =
+                new SecretCache(new SecretCacheConfiguration().withClient(asm).withCacheItemTTL(500));
 
         // Request the secret multiple times and verify the correct result
         repeat(5, n -> Assert.assertEquals(sc.getSecretString(""), secret));
@@ -382,10 +404,13 @@ public class SecretCacheTest {
     public void basicSecretCacheTestNoVersions() {
         final String secret = "basicSecretCacheTestNoVersion";
 
-        getSecretValueResponse = GetSecretValueResponse.builder().secretString(secret).build();
+        getSecretValueResponse =
+                GetSecretValueResponse.builder().secretString(secret).build();
 
-        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class))).thenReturn(describeSecretResponse);
-        Mockito.when(asm.getSecretValue(Mockito.any(GetSecretValueRequest.class))).thenReturn(getSecretValueResponse);
+        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class)))
+                .thenReturn(describeSecretResponse);
+        Mockito.when(asm.getSecretValue(Mockito.any(GetSecretValueRequest.class)))
+                .thenReturn(getSecretValueResponse);
         SecretCache sc = new SecretCache(asm);
 
         // Request the secret multiple times and verify the correct result
@@ -398,9 +423,10 @@ public class SecretCacheTest {
         sc.close();
     }
 
-    @Test(expectedExceptions = { RuntimeException.class })
+    @Test(expectedExceptions = {RuntimeException.class})
     public void basicSecretCacheExceptionTest() {
-        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class))).thenThrow(new RuntimeException());
+        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class)))
+                .thenThrow(new RuntimeException());
         SecretCache sc = new SecretCache(asm);
         sc.getSecretString("");
         sc.close();
@@ -408,7 +434,8 @@ public class SecretCacheTest {
 
     @Test
     public void basicSecretCacheExceptionRefreshNowTest() throws Throwable {
-        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class))).thenThrow(new RuntimeException());
+        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class)))
+                .thenThrow(new RuntimeException());
         SecretCache sc = new SecretCache(asm);
         Assert.assertFalse(sc.refreshNow(""));
         Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any(DescribeSecretRequest.class));
@@ -420,7 +447,8 @@ public class SecretCacheTest {
     @Test
     public void basicSecretCacheExceptionRetryTest() throws Throwable {
         final int retryCount = 10;
-        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class))).thenThrow(new RuntimeException());
+        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class)))
+                .thenThrow(new RuntimeException());
         SecretCache sc = new SecretCache(asm);
         for (int n = 0; n < retryCount; ++n) {
             try {
@@ -446,7 +474,8 @@ public class SecretCacheTest {
 
     @Test
     public void basicSecretCacheNullTest() {
-        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class))).thenReturn(null);
+        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class)))
+                .thenReturn(null);
         SecretCache sc = new SecretCache(asm);
         Assert.assertNull(sc.getSecretString(""));
         sc.close();
@@ -467,10 +496,13 @@ public class SecretCacheTest {
         versionMap.put("versionId", null);
         Mockito.when(describeSecretResponse.versionIdsToStages()).thenReturn(versionMap);
 
-        getSecretValueResponse = GetSecretValueResponse.builder().secretString(secret).build();
+        getSecretValueResponse =
+                GetSecretValueResponse.builder().secretString(secret).build();
 
-        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class))).thenReturn(describeSecretResponse);
-        Mockito.when(asm.getSecretValue(Mockito.any(GetSecretValueRequest.class))).thenReturn(getSecretValueResponse);
+        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class)))
+                .thenReturn(describeSecretResponse);
+        Mockito.when(asm.getSecretValue(Mockito.any(GetSecretValueRequest.class)))
+                .thenReturn(getSecretValueResponse);
         SecretCache sc = new SecretCache(asm);
 
         // Request the secret multiple times and verify the correct result
@@ -481,5 +513,4 @@ public class SecretCacheTest {
         Mockito.verify(asm, Mockito.times(0)).getSecretValue(Mockito.any(GetSecretValueRequest.class));
         sc.close();
     }
-
 }

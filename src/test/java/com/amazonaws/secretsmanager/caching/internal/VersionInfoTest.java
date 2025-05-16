@@ -1,11 +1,9 @@
 package com.amazonaws.secretsmanager.caching.internal;
 
+import com.amazonaws.secretsmanager.caching.cache.internal.VersionInfo;
 import java.util.regex.Pattern;
-
 import org.testng.Assert;
 import org.testng.annotations.Test;
-
-import com.amazonaws.secretsmanager.caching.cache.internal.VersionInfo;
 
 public class VersionInfoTest {
     @Test

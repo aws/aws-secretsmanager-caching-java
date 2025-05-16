@@ -13,10 +13,9 @@
 
 package com.amazonaws.secretsmanager.caching.cache;
 
-import java.util.concurrent.ThreadLocalRandom;
-
 import com.amazonaws.secretsmanager.caching.SecretCacheConfiguration;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.concurrent.ThreadLocalRandom;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueResponse;
 
@@ -86,9 +85,8 @@ public abstract class SecretCacheObject<T> {
      *            The secret cache configuration.
      */
     @SuppressFBWarnings(value = "EI_EXPOSE_REP2")
-    public SecretCacheObject(final String secretId,
-                             final SecretsManagerClient client,
-                             final SecretCacheConfiguration config) {
+    public SecretCacheObject(
+            final String secretId, final SecretsManagerClient client, final SecretCacheConfiguration config) {
         this.secretId = secretId;
         this.client = client;
         this.config = config;
@@ -112,7 +110,9 @@ public abstract class SecretCacheObject<T> {
     protected abstract GetSecretValueResponse getSecretValue(T result);
 
     public abstract boolean equals(Object obj);
+
     public abstract int hashCode();
+
     public abstract String toString();
 
     /**
@@ -123,9 +123,9 @@ public abstract class SecretCacheObject<T> {
     @SuppressWarnings("unchecked")
     private T getResult() {
         if (null != this.config.getCacheHook()) {
-            return (T)this.config.getCacheHook().get(this.data);
+            return (T) this.config.getCacheHook().get(this.data);
         }
-        return (T)this.data;
+        return (T) this.data;
     }
 
     /**
@@ -145,7 +145,9 @@ public abstract class SecretCacheObject<T> {
      * @return True if the secret item should be refreshed.
      */
     protected boolean isRefreshNeeded() {
-        if (this.refreshNeeded) { return true; }
+        if (this.refreshNeeded) {
+            return true;
+        }
         if (null != this.exception) {
             // If we encountered an exception on the last attempt
             // we do not want to keep retrying without a pause between
@@ -167,7 +169,9 @@ public abstract class SecretCacheObject<T> {
      * Refresh the cached secret state only when needed.
      */
     private void refresh() {
-        if (!this.isRefreshNeeded()) { return; }
+        if (!this.isRefreshNeeded()) {
+            return;
+        }
         this.refreshNeeded = false;
         try {
             this.setResult(this.executeRefresh());
@@ -179,13 +183,13 @@ public abstract class SecretCacheObject<T> {
             // factor and default backoff duration.
             Long growth = 1L;
             if (this.exceptionBackoffPower > 0) {
-                growth = (long)Math.pow(EXCEPTION_BACKOFF_GROWTH_FACTOR, this.exceptionBackoffPower);
+                growth = (long) Math.pow(EXCEPTION_BACKOFF_GROWTH_FACTOR, this.exceptionBackoffPower);
             }
             growth *= EXCEPTION_BACKOFF;
             // Add in EXCEPTION_BACKOFF time to make sure the random jitter will not reduce
             // the wait time too low.
             Long retryWait = Math.min(EXCEPTION_BACKOFF + growth, BACKOFF_PLATEAU);
-            if ( retryWait < BACKOFF_PLATEAU ) {
+            if (retryWait < BACKOFF_PLATEAU) {
                 // Only increase the backoff power if we haven't hit the backoff plateau yet.
                 this.exceptionBackoffPower += 1;
             }
@@ -239,11 +243,12 @@ public abstract class SecretCacheObject<T> {
         synchronized (lock) {
             refresh();
             if (null == this.data) {
-                if (null != this.exception) { throw this.exception; }
+                if (null != this.exception) {
+                    throw this.exception;
+                }
             }
 
             return this.getSecretValue(this.getResult());
         }
     }
-
 }

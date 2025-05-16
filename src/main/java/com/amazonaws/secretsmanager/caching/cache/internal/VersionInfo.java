@@ -26,11 +26,10 @@ public class VersionInfo {
     // incremented for releases containing an immediate bug fix.
     public static final String BUGFIX_REVISION_NUM = "0";
 
-    public static final String RELEASE_VERSION = MAJOR_REVISION_NUM + "." + MINOR_REVISION_NUM
-            + "." + BUGFIX_REVISION_NUM;
+    public static final String RELEASE_VERSION =
+            MAJOR_REVISION_NUM + "." + MINOR_REVISION_NUM + "." + BUGFIX_REVISION_NUM;
 
     public static final String USER_AGENT = "AwsSecretCache/" + RELEASE_VERSION;
 
-    private VersionInfo() {
-    }
+    private VersionInfo() {}
 }

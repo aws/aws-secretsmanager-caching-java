@@ -13,11 +13,9 @@
 
 package com.amazonaws.secretsmanager.caching;
 
-import java.util.concurrent.TimeUnit;
-
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.concurrent.TimeUnit;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
-
 
 /**
  * Cache configuration options such as max cache size, ttl for cached items, etc.
@@ -34,7 +32,7 @@ public class SecretCacheConfiguration {
     /** The default version stage to use when retrieving secret values. */
     public static final String DEFAULT_VERSION_STAGE = "AWSCURRENT";
 
-    /** 
+    /**
      * The default maximum jitter value in milliseconds to use when forcing a refresh.
      * This prevents continuous refreshNow() calls by adding a random sleep.
      */
@@ -77,8 +75,7 @@ public class SecretCacheConfiguration {
      * Default constructor for the SecretCacheConfiguration object.
      *
      */
-    public SecretCacheConfiguration() {
-    }
+    public SecretCacheConfiguration() {}
 
     /**
      * Returns the AWS Secrets Manager client that is used for requesting secret values.
@@ -89,7 +86,6 @@ public class SecretCacheConfiguration {
     public SecretsManagerClient getClient() {
         return client;
     }
-
 
     /**
      * Sets the AWS Secrets Manager client that should be used by the cache for requesting
@@ -116,7 +112,6 @@ public class SecretCacheConfiguration {
         return this;
     }
 
-
     /**
      * Returns the interface used to hook in-memory cache updates.
      *
@@ -126,7 +121,6 @@ public class SecretCacheConfiguration {
     public SecretCacheHook getCacheHook() {
         return cacheHook;
     }
-
 
     /**
      * Sets the interface used to hook the in-memory cache.
@@ -139,7 +133,6 @@ public class SecretCacheConfiguration {
         this.cacheHook = cacheHook;
     }
 
-
     /**
      * Sets the interface used to hook the in-memory cache.
      *
@@ -151,7 +144,6 @@ public class SecretCacheConfiguration {
         this.setCacheHook(cacheHook);
         return this;
     }
-
 
     /**
      * Returns the max cache size that should be used for creating the cache.

@@ -19,7 +19,7 @@ package com.amazonaws.secretsmanager.caching;
  * cache.  One example would be encrypting/decrypting items stored in the
  * in-memory cache.
  */
-public interface SecretCacheHook{
+public interface SecretCacheHook {
     /**
      * Prepare the object for storing in the cache
      *

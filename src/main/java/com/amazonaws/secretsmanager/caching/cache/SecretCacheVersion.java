@@ -13,10 +13,8 @@
 
 package com.amazonaws.secretsmanager.caching.cache;
 
-import java.util.Objects;
-
 import com.amazonaws.secretsmanager.caching.SecretCacheConfiguration;
-
+import java.util.Objects;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueRequest;
 import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueResponse;
@@ -47,10 +45,11 @@ public class SecretCacheVersion extends SecretCacheObject<GetSecretValueResponse
      * @param config
      *            The secret cache configuration.
      */
-    public SecretCacheVersion(final String secretId,
-                              final String versionId,
-                              final SecretsManagerClient client,
-                              final SecretCacheConfiguration config) {
+    public SecretCacheVersion(
+            final String secretId,
+            final String versionId,
+            final SecretsManagerClient client,
+            final SecretCacheConfiguration config) {
         super(secretId, client, config);
         this.versionId = versionId;
         hash = String.format("%s %s", secretId, versionId).hashCode();
@@ -59,8 +58,8 @@ public class SecretCacheVersion extends SecretCacheObject<GetSecretValueResponse
     @Override
     public boolean equals(Object obj) {
         if (obj instanceof SecretCacheVersion) {
-            return Objects.equals(this.secretId,((SecretCacheVersion)obj).secretId) &&
-                    Objects.equals(this.versionId, ((SecretCacheVersion)obj).versionId);
+            return Objects.equals(this.secretId, ((SecretCacheVersion) obj).secretId)
+                    && Objects.equals(this.versionId, ((SecretCacheVersion) obj).versionId);
         }
         return false;
     }
@@ -82,8 +81,10 @@ public class SecretCacheVersion extends SecretCacheObject<GetSecretValueResponse
      */
     @Override
     protected GetSecretValueResponse executeRefresh() {
-        return client.getSecretValue(
-                GetSecretValueRequest.builder().secretId(this.secretId).versionId(this.versionId).build());
+        return client.getSecretValue(GetSecretValueRequest.builder()
+                .secretId(this.secretId)
+                .versionId(this.versionId)
+                .build());
     }
 
     /**
@@ -97,5 +98,4 @@ public class SecretCacheVersion extends SecretCacheObject<GetSecretValueResponse
     protected GetSecretValueResponse getSecretValue(GetSecretValueResponse gsvResult) {
         return gsvResult;
     }
-
 }

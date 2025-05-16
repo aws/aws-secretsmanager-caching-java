@@ -14,9 +14,8 @@
 package com.amazonaws.secretsmanager.caching.cache;
 
 import java.util.HashMap;
-
-import org.testng.annotations.Test;
 import org.testng.Assert;
+import org.testng.annotations.Test;
 
 public class LRUCacheTest {
 
@@ -160,5 +159,4 @@ public class LRUCacheTest {
             Assert.assertEquals(cache.get(n), new Integer(n));
         }
     }
-
 }
