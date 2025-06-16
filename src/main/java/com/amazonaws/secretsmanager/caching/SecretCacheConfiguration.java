@@ -71,7 +71,7 @@ public class SecretCacheConfiguration {
      * will be performed using this value.  This helps prevent code from
      * executing a refreshNow in a continuous loop without waiting.
      */
-    private long forceRefreshJitter = DEFAULT_FORCE_REFRESH_JITTER;
+    private long forceRefreshJitterMillis = DEFAULT_FORCE_REFRESH_JITTER;
 
     /**
      * Default constructor for the SecretCacheConfiguration object.
@@ -255,8 +255,8 @@ public class SecretCacheConfiguration {
      *
      * @return The maximum jitter sleep time in milliseconds used with refreshing secrets.
      */
-    public long getForceRefreshJitter() {
-        return this.forceRefreshJitter;
+    public long getForceRefreshJitterMillis() {
+        return this.forceRefreshJitterMillis;
     }
 
     /**
@@ -265,15 +265,15 @@ public class SecretCacheConfiguration {
      * by adding a random sleep between half the configured value and the full value.
      * The value must be greater than or equal to zero.
      *
-     * @param forceRefreshJitter
+     * @param forceRefreshJitterMillis
      *            The maximum sleep time in milliseconds between force refresh calls.
      * @throws IllegalArgumentException if the value is negative
      */
-    public void setForceRefreshJitter(long forceRefreshJitter) {
-        if (forceRefreshJitter < 0) {
+    public void setForceRefreshJitterMillis(long forceRefreshJitterMillis) {
+        if (forceRefreshJitterMillis < 0) {
             throw new IllegalArgumentException("Force refresh jitter must be greater than or equal to zero");
         }
-        this.forceRefreshJitter = forceRefreshJitter;
+        this.forceRefreshJitterMillis = forceRefreshJitterMillis;
     }
 
     /**
@@ -281,13 +281,13 @@ public class SecretCacheConfiguration {
      * This value is used to prevent continuous refreshNow() calls in tight loops
      * by adding a random sleep between half the configured value and the full value.
      *
-     * @param forceRefreshJitter
+     * @param forceRefreshJitterMillis
      *            The maximum sleep time in milliseconds between force refresh calls.
      * @return The updated ClientConfiguration object with the new refresh sleep time.
      * @throws IllegalArgumentException if the value is negative
      */
-    public SecretCacheConfiguration withForceRefreshJitter(long forceRefreshJitter) {
-        this.setForceRefreshJitter(forceRefreshJitter);
+    public SecretCacheConfiguration withForceRefreshJitterMillis(long forceRefreshJitterMillis) {
+        this.setForceRefreshJitterMillis(forceRefreshJitterMillis);
         return this;
     }
 

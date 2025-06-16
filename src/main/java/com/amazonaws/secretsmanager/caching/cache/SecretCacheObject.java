@@ -208,7 +208,7 @@ public abstract class SecretCacheObject<T> {
         // When forcing a refresh, always sleep with a random jitter
         // to prevent coding errors that could be calling refreshNow
         // in a loop.
-        long jitter = this.config.getForceRefreshJitter();
+        long jitter = this.config.getForceRefreshJitterMillis();
         long sleep = ThreadLocalRandom.current()
                 .nextLong(
                         jitter / 2,
