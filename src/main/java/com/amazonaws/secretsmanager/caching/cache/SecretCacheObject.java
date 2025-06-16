@@ -37,13 +37,6 @@ public abstract class SecretCacheObject<T> {
      */
     private static final long BACKOFF_PLATEAU = EXCEPTION_BACKOFF * 128;
 
-    /**
-     * When forcing a refresh using the refreshNow method, a random sleep
-     * will be performed using this value.  This helps prevent code from
-     * executing a refreshNow in a continuous loop without waiting.
-     */
-    private static final long FORCE_REFRESH_JITTER_SLEEP = 5000;
-
     /** The secret identifier for this cached object. */
     protected final String secretId;
 
@@ -215,10 +208,11 @@ public abstract class SecretCacheObject<T> {
         // When forcing a refresh, always sleep with a random jitter
         // to prevent coding errors that could be calling refreshNow
         // in a loop.
+        long jitter = this.config.getForceRefreshJitter();
         long sleep = ThreadLocalRandom.current()
                 .nextLong(
-                        FORCE_REFRESH_JITTER_SLEEP / 2,
-                        FORCE_REFRESH_JITTER_SLEEP + 1);
+                        jitter / 2,
+                        jitter + 1);
         // Make sure we are not waiting for the next refresh after an
         // exception.  If we are, sleep based on the retry delay of
         // the refresh to prevent a hard loop in attempting to refresh a
