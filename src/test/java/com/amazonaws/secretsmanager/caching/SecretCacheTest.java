@@ -81,25 +81,27 @@ public class SecretCacheTest {
         } catch (Exception e) {
         }
     }
-    
+
     @Test
     public void testForceRefreshJitterConfiguration() {
         // Test default value
         SecretCacheConfiguration config = new SecretCacheConfiguration();
-        Assert.assertEquals(config.getForceRefreshJitterMillis(), SecretCacheConfiguration.DEFAULT_FORCE_REFRESH_JITTER);
-        
+        Assert.assertEquals(
+                config.getForceRefreshJitterMillis(), SecretCacheConfiguration.DEFAULT_FORCE_REFRESH_JITTER);
+
         // Test setting a custom value
         long customJitter = 250L;
         config.setForceRefreshJitterMillis(customJitter);
         Assert.assertEquals(config.getForceRefreshJitterMillis(), customJitter);
-        
+
         // Test zero is valid
         config.setForceRefreshJitterMillis(0);
         Assert.assertEquals(config.getForceRefreshJitterMillis(), 0);
     }
-    
-    @Test(expectedExceptions = IllegalArgumentException.class, 
-          expectedExceptionsMessageRegExp = "Force refresh jitter must be greater than or equal to zero")
+
+    @Test(
+            expectedExceptions = IllegalArgumentException.class,
+            expectedExceptionsMessageRegExp = "Force refresh jitter must be greater than or equal to zero")
     public void testForceRefreshJitterValidation() {
         // Test that negative values throw an exception
         SecretCacheConfiguration config = new SecretCacheConfiguration();

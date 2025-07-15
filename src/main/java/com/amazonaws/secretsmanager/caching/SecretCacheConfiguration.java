@@ -282,5 +282,4 @@ public class SecretCacheConfiguration {
         this.setForceRefreshJitterMillis(forceRefreshJitterMillis);
         return this;
     }
-
 }
