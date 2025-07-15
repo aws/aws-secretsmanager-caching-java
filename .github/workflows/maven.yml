@@ -4,8 +4,9 @@
 name: Java CI with Maven
 
 on:
-  pull_request:
+  push:
     branches: [master, v2]
+  pull_request:
     types: [opened, synchronize, ready_for_review]
 
 jobs:
