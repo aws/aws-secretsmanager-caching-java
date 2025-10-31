@@ -214,7 +214,7 @@ public abstract class SecretCacheObject<T> {
             // secret that continues to throw an exception such as AccessDenied.
             Duration wait = Duration.between(
                     this.nextRetryTime,
-                    java.time.Instant.now());
+                    java.time.Instant.now()).abs();
             // pick the max.
             sleep = sleep.compareTo(wait) >= 0 ? sleep : wait;
         }
