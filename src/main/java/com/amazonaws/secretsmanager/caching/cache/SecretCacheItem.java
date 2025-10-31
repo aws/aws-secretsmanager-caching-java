@@ -13,16 +13,17 @@
 
 package com.amazonaws.secretsmanager.caching.cache;
 
-import java.util.Objects;
-import java.util.Optional;
-import java.util.concurrent.ThreadLocalRandom;
-
 import com.amazonaws.secretsmanager.caching.SecretCacheConfiguration;
-
+import software.amazon.awssdk.retries.api.internal.backoff.FixedDelayWithJitter;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 import software.amazon.awssdk.services.secretsmanager.model.DescribeSecretRequest;
 import software.amazon.awssdk.services.secretsmanager.model.DescribeSecretResponse;
 import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueResponse;
+
+import java.time.Instant;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * The cached secret item which contains information from the DescribeSecret
@@ -39,7 +40,8 @@ public class SecretCacheItem extends SecretCacheObject<DescribeSecretResponse> {
      * The next scheduled refresh time for this item.  Once the item is accessed
      * after this time, the item will be synchronously refreshed.
      */
-    private long nextRefreshTime = 0;
+    private Instant nextRefreshTime = Instant.ofEpochMilli(0);
+    private FixedDelayWithJitter fixedDelayWithJitter;
 
     /**
      * Construct a new cached item for the secret.
@@ -56,6 +58,8 @@ public class SecretCacheItem extends SecretCacheObject<DescribeSecretResponse> {
                            final SecretsManagerClient client,
                            final SecretCacheConfiguration config) {
         super(secretId, client, config);
+        this.fixedDelayWithJitter = new FixedDelayWithJitter(ThreadLocalRandom::current,
+                config.getCacheItemTTLDuration());
     }
 
     @Override
@@ -87,10 +91,7 @@ public class SecretCacheItem extends SecretCacheObject<DescribeSecretResponse> {
     protected boolean isRefreshNeeded() {
         if (super.isRefreshNeeded()) { return true; }
         if (null != this.exception) { return false; }
-        if (System.currentTimeMillis() >= this.nextRefreshTime) {
-            return true;
-        }
-        return false;
+        return Instant.now().isAfter(nextRefreshTime);
     }
 
     /**
@@ -101,9 +102,8 @@ public class SecretCacheItem extends SecretCacheObject<DescribeSecretResponse> {
     @Override
     protected DescribeSecretResponse executeRefresh() {
         DescribeSecretResponse describeSecretResponse = client.describeSecret(DescribeSecretRequest.builder().secretId(this.secretId).build());
-        long ttl = this.config.getCacheItemTTL();
-        this.nextRefreshTime = System.currentTimeMillis() +
-                ThreadLocalRandom.current().nextLong(ttl / 2,ttl + 1) ;
+        // Attempt count is irrelevant for fixed delay refresh strategy
+        this.nextRefreshTime = Instant.now().plus(this.fixedDelayWithJitter.computeDelay(1));
 
         return describeSecretResponse;
     }

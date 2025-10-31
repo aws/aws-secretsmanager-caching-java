@@ -13,29 +13,36 @@
 
 package com.amazonaws.secretsmanager.caching.cache;
 
-import java.util.concurrent.ThreadLocalRandom;
-
 import com.amazonaws.secretsmanager.caching.SecretCacheConfiguration;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import software.amazon.awssdk.retries.api.internal.backoff.ExponentialDelayWithJitter;
+import software.amazon.awssdk.retries.api.internal.backoff.FixedDelayWithJitter;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueResponse;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Basic secret caching object.
  */
 public abstract class SecretCacheObject<T> {
 
-    /** The number of milliseconds to wait after an exception. */
-    private static final long EXCEPTION_BACKOFF = 1000;
-
-    /** The growth factor of the backoff duration. */
-    private static final long EXCEPTION_BACKOFF_GROWTH_FACTOR = 2;
+    /** The duration to wait after an exception. */
+    private static final Duration BACKOFF_MIN = Duration.ofSeconds(1);
 
     /**
-     * The maximum number of milliseconds to wait before retrying a failed
-     * request.
+     * The maximum duration to back off to.
      */
-    private static final long BACKOFF_PLATEAU = EXCEPTION_BACKOFF * 128;
+    private static final Duration BACKOFF_MAX = Duration.ofSeconds(20);
+
+    /**
+     * Backoff strategy with jitter for retries on errors.
+     * Mimics the backoff strategy of the AWS SDK for Java with unlimited attempts.
+     */
+    private static ExponentialDelayWithJitter refreshStrategy = new ExponentialDelayWithJitter(ThreadLocalRandom::current,
+            BACKOFF_MIN, BACKOFF_MAX);
 
     /** The secret identifier for this cached object. */
     protected final String secretId;
@@ -63,16 +70,23 @@ public abstract class SecretCacheObject<T> {
     protected RuntimeException exception = null;
 
     /**
-     * The number of exceptions encountered since the last successfully
-     * AWS Secrets Manager request.  This is used to calculate an exponential
-     * backoff.
+     * The number of attempts encountered since the last successful
+     * AWS Secrets Manager request. This is used to calculate an exponential
+     * backoff. Starts at 1.
      */
-    private long exceptionBackoffPower = 0;
+    private int attempts = 1;
+
+    /**
+     * When forcing a refresh, always sleep with a random jitter
+     * to prevent coding errors that could be calling refreshNow
+     * in a loop.
+     */
+    private FixedDelayWithJitter refreshNowRetryStrategy;
 
     /**
      * The time to wait before retrying a failed AWS Secrets Manager request.
      */
-    private long nextRetryTime = 0;
+    private Instant nextRetryTime = Instant.ofEpochMilli(0);
 
     /**
      * Construct a new cached item for the secret.
@@ -92,6 +106,8 @@ public abstract class SecretCacheObject<T> {
         this.secretId = secretId;
         this.client = client;
         this.config = config;
+        refreshNowRetryStrategy = new FixedDelayWithJitter(ThreadLocalRandom::current,
+                this.config.getForceRefreshJitter());
     }
 
     /**
@@ -153,12 +169,9 @@ public abstract class SecretCacheObject<T> {
             //
             // If we have exceeded our backoff time we will refresh
             // the secret now.
-            if (System.currentTimeMillis() >= this.nextRetryTime) {
-                return true;
-            }
             // Don't keep trying to refresh a secret that previously threw
             // an exception.
-            return false;
+            return Instant.now().isAfter(this.nextRetryTime);
         }
         return false;
     }
@@ -172,27 +185,13 @@ public abstract class SecretCacheObject<T> {
         try {
             this.setResult(this.executeRefresh());
             this.exception = null;
-            this.exceptionBackoffPower = 0;
+            this.attempts = 1;
         } catch (RuntimeException ex) {
             this.exception = ex;
-            // Determine the amount of growth in exception backoff time based on the growth
-            // factor and default backoff duration.
-            Long growth = 1L;
-            if (this.exceptionBackoffPower > 0) {
-                growth = (long)Math.pow(EXCEPTION_BACKOFF_GROWTH_FACTOR, this.exceptionBackoffPower);
-            }
-            growth *= EXCEPTION_BACKOFF;
-            // Add in EXCEPTION_BACKOFF time to make sure the random jitter will not reduce
-            // the wait time too low.
-            Long retryWait = Math.min(EXCEPTION_BACKOFF + growth, BACKOFF_PLATEAU);
-            if ( retryWait < BACKOFF_PLATEAU ) {
-                // Only increase the backoff power if we haven't hit the backoff plateau yet.
-                this.exceptionBackoffPower += 1;
-            }
-
-            // Use random jitter with the wait time
-            retryWait = ThreadLocalRandom.current().nextLong(retryWait / 2, retryWait + 1);
-            this.nextRetryTime = System.currentTimeMillis() + retryWait;
+            // Increment before computing delay. Otherwise the retry for attempts = 1 is immediate.
+            this.attempts++;
+            Duration retryWait = refreshStrategy.computeDelay(this.attempts);
+            this.nextRetryTime = Instant.now().plus(retryWait);
         }
     }
 
@@ -205,23 +204,21 @@ public abstract class SecretCacheObject<T> {
      */
     public boolean refreshNow() throws InterruptedException {
         this.refreshNeeded = true;
-        // When forcing a refresh, always sleep with a random jitter
-        // to prevent coding errors that could be calling refreshNow
-        // in a loop.
-        long jitter = this.config.getForceRefreshJitterMillis();
-        long sleep = ThreadLocalRandom.current()
-                .nextLong(
-                        jitter / 2,
-                        jitter + 1);
-        // Make sure we are not waiting for the next refresh after an
-        // exception.  If we are, sleep based on the retry delay of
-        // the refresh to prevent a hard loop in attempting to refresh a
-        // secret that continues to throw an exception such as AccessDenied.
+
+        // Attempts is irrelevant for a fixed delay retry strategy
+        Duration sleep = this.refreshNowRetryStrategy.computeDelay(1);
         if (null != this.exception) {
-            long wait = this.nextRetryTime - System.currentTimeMillis();
-            sleep = Math.max(wait, sleep);
+            // Make sure we are not waiting for the next refresh after an
+            // exception. If we are, sleep based on the retry delay of
+            // the refresh to prevent a hard loop in attempting to refresh a
+            // secret that continues to throw an exception such as AccessDenied.
+            Duration wait = Duration.between(
+                    this.nextRetryTime,
+                    java.time.Instant.now());
+            // pick the max.
+            sleep = sleep.compareTo(wait) >= 0 ? sleep : wait;
         }
-        Thread.sleep(sleep);
+        Thread.sleep(sleep.toMillis());
 
         // Perform the requested refresh
         synchronized (lock) {

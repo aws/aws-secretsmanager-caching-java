@@ -15,6 +15,7 @@ package com.amazonaws.secretsmanager.caching;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -22,9 +23,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.IntConsumer;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import org.mockito.ArgumentMatcher;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.testng.Assert;
@@ -32,6 +40,8 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
+import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClientBuilder;
 import software.amazon.awssdk.services.secretsmanager.model.DescribeSecretRequest;
@@ -83,29 +93,93 @@ public class SecretCacheTest {
         } catch (Exception e) {
         }
     }
-    
+
+    @Test
+    public void secretCacheConstructorTestDefault() {
+        try (MockedStatic<SecretsManagerClient> mockSmc = Mockito.mockStatic(SecretsManagerClient.class)) {
+            SecretsManagerClientBuilder mock = Mockito.mock(SecretsManagerClientBuilder.class);
+            mockSmc.when(SecretsManagerClient::builder).thenReturn(mock);
+            ClientOverrideConfiguration overrideConfiguration = Mockito.mock(ClientOverrideConfiguration.class);
+            ClientOverrideConfiguration.Builder builder = Mockito.mock(ClientOverrideConfiguration.Builder.class);
+            when(overrideConfiguration.toBuilder()).thenReturn(builder);
+            when(builder.putAdvancedOption(any(), anyString())).thenReturn(builder);
+            when(builder.build()).thenReturn(overrideConfiguration);
+            when(mock.overrideConfiguration(Mockito.any(ClientOverrideConfiguration.class))).thenReturn(mock);
+            when(mock.overrideConfiguration()).thenReturn(overrideConfiguration);
+            when(mock.build()).thenReturn(asm);
+            SecretCache sc1 = new SecretCache();
+            sc1.close();
+
+            verify(builder).putAdvancedOption(eq(SdkAdvancedClientOption.USER_AGENT_SUFFIX), anyString());
+        }
+    }
+
+    @Test
+    public void secretCacheConstructorTestCustomClient() {
+        SecretsManagerClientBuilder mock = Mockito.mock(SecretsManagerClientBuilder.class);
+        ClientOverrideConfiguration overrideConfiguration = Mockito.mock(ClientOverrideConfiguration.class);
+        ClientOverrideConfiguration.Builder builder = Mockito.mock(ClientOverrideConfiguration.Builder.class);
+        when(overrideConfiguration.toBuilder()).thenReturn(builder);
+        when(builder.putAdvancedOption(any(), anyString())).thenReturn(builder);
+        when(builder.build()).thenReturn(overrideConfiguration);
+        when(mock.overrideConfiguration(Mockito.any(ClientOverrideConfiguration.class))).thenReturn(mock);
+        when(mock.overrideConfiguration()).thenReturn(overrideConfiguration);
+        when(mock.build()).thenReturn(asm);
+
+        SecretCache sc = new SecretCache(mock);
+        sc.close();
+
+        verify(builder).putAdvancedOption(eq(SdkAdvancedClientOption.USER_AGENT_SUFFIX), anyString());
+    }
+
+    @Deprecated
     @Test
     public void testForceRefreshJitterConfiguration() {
         // Test default value
         SecretCacheConfiguration config = new SecretCacheConfiguration();
-        Assert.assertEquals(config.getForceRefreshJitterMillis(), SecretCacheConfiguration.DEFAULT_FORCE_REFRESH_JITTER);
-        
+        Assert.assertEquals(config.getForceRefreshJitterMillis(),
+                SecretCacheConfiguration.DEFAULT_FORCE_REFRESH_JITTER);
+
         // Test setting a custom value
         long customJitter = 250L;
         config.setForceRefreshJitterMillis(customJitter);
         Assert.assertEquals(config.getForceRefreshJitterMillis(), customJitter);
-        
+
         // Test zero is valid
         config.setForceRefreshJitterMillis(0);
         Assert.assertEquals(config.getForceRefreshJitterMillis(), 0);
     }
-    
-    @Test(expectedExceptions = IllegalArgumentException.class, 
-          expectedExceptionsMessageRegExp = "Force refresh jitter must be greater than or equal to zero")
+
+    @Test
+    public void testForceRefreshJitterDurationConfiguration() {
+        // Test default value
+        SecretCacheConfiguration config = new SecretCacheConfiguration();
+        Assert.assertEquals(config.getForceRefreshJitter(),
+                SecretCacheConfiguration.DEFAULT_FORCE_REFRESH_JITTER_DURATION);
+
+        // Test setting a custom value
+        Duration customJitter = Duration.ofMillis(250);
+        config.setForceRefreshJitter(customJitter);
+        Assert.assertEquals(config.getForceRefreshJitter(), customJitter);
+
+        // Test zero is valid
+        config.setForceRefreshJitter(Duration.ZERO);
+        Assert.assertEquals(config.getForceRefreshJitter(), Duration.ZERO);
+    }
+
+    @Deprecated
+    @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "Force refresh jitter must be greater than or equal to zero")
     public void testForceRefreshJitterValidation() {
         // Test that negative values throw an exception
         SecretCacheConfiguration config = new SecretCacheConfiguration();
         config.setForceRefreshJitterMillis(-1);
+    }
+
+    @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "Force refresh jitter must be greater than or equal to zero")
+    public void testForceRefreshJitterDurationValidation() {
+        // Test that negative values throw an exception
+        SecretCacheConfiguration config = new SecretCacheConfiguration();
+        config.setForceRefreshJitter(Duration.ofMillis(-1));
     }
 
     @Test
@@ -328,7 +402,7 @@ public class SecretCacheTest {
 
         SecretCache sc = new SecretCache(new SecretCacheConfiguration()
                 .withClient(asm)
-                .withCacheItemTTL(500));
+                .withCacheItemTTL(Duration.ofMillis(500)));
 
         // Request the secret multiple times and verify the correct result
         repeat(10, n -> Assert.assertEquals(sc.getSecretString(""), secret));
@@ -347,6 +421,58 @@ public class SecretCacheTest {
     }
 
     @Test
+    public void basicSecretCacheRefreshNullVersionIdsToStagesReturnsNull() throws Throwable {
+        Mockito.when(describeSecretResponse.versionIdsToStages()).thenReturn(null);
+
+        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class))).thenReturn(describeSecretResponse);
+
+        SecretCache sc = new SecretCache(new SecretCacheConfiguration()
+                .withClient(asm));
+
+        Assert.assertNull(sc.getSecretString(""));
+
+        Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any(DescribeSecretRequest.class));
+        sc.close();
+    }
+
+    @Deprecated
+    @Test
+    public void secretCacheRefreshAfterVersionChangeTestDeprecated() throws Throwable {
+        // Kept around to cover .withCacheItemTTL(long cacheItemTTL)
+        final String secret = "secretCacheRefreshAfterVersionChangeTestDeprecated";
+        Map<String, List<String>> versionMap = new HashMap<String, List<String>>();
+        versionMap.put("versionId", Arrays.asList("AWSCURRENT"));
+        Mockito.when(describeSecretResponse.versionIdsToStages()).thenReturn(versionMap);
+
+        getSecretValueResponse = GetSecretValueResponse.builder().secretString(secret).build();
+
+        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class))).thenReturn(describeSecretResponse);
+        Mockito.when(asm.getSecretValue(Mockito.any(GetSecretValueRequest.class))).thenReturn(getSecretValueResponse);
+        SecretCache sc = new SecretCache(new SecretCacheConfiguration()
+                .withClient(asm)
+                .withForceRefreshJitterMillis(1)
+                .withCacheItemTTL(500));
+
+        // Request the secret multiple times and verify the correct result
+        repeat(5, n -> Assert.assertEquals(sc.getSecretString(""), secret));
+
+        // Verify that multiple requests did not call the API
+        Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any(DescribeSecretRequest.class));
+        Mockito.verify(asm, Mockito.times(1)).getSecretValue(Mockito.any(GetSecretValueRequest.class));
+
+        // Wait long enough to expire the TTL on the cached item.
+        Thread.sleep(502);
+        versionMap.clear();
+        // Simulate a change in secret version values
+        versionMap.put("versionIdNew", Arrays.asList("AWSCURRENT"));
+        repeat(5, n -> Assert.assertEquals(sc.getSecretString(""), secret));
+        // Verify that the refresh occurred after the ttl
+        Mockito.verify(asm, Mockito.times(2)).describeSecret(Mockito.any(DescribeSecretRequest.class));
+        Mockito.verify(asm, Mockito.times(2)).getSecretValue(Mockito.any(GetSecretValueRequest.class));
+        sc.close();
+    }
+
+    @Test
     public void secretCacheRefreshAfterVersionChangeTest() throws Throwable {
         final String secret = "secretCacheRefreshAfterVersionChangeTest";
         Map<String, List<String>> versionMap = new HashMap<String, List<String>>();
@@ -359,7 +485,10 @@ public class SecretCacheTest {
         Mockito.when(asm.getSecretValue(Mockito.any(GetSecretValueRequest.class))).thenReturn(getSecretValueResponse);
         SecretCache sc = new SecretCache(new SecretCacheConfiguration()
                 .withClient(asm)
-                .withCacheItemTTL(500));
+                .withMaxCacheSize(10)
+                .withVersionStage("AWSCURRENT")
+                .withForceRefreshJitter(Duration.ofMillis(1))
+                .withCacheItemTTL(Duration.ofMillis(500)));
 
         // Request the secret multiple times and verify the correct result
         repeat(5, n -> Assert.assertEquals(sc.getSecretString(""), secret));
@@ -369,7 +498,7 @@ public class SecretCacheTest {
         Mockito.verify(asm, Mockito.times(1)).getSecretValue(Mockito.any(GetSecretValueRequest.class));
 
         // Wait long enough to expire the TTL on the cached item.
-        Thread.sleep(600);
+        Thread.sleep(502);
         versionMap.clear();
         // Simulate a change in secret version values
         versionMap.put("versionIdNew", Arrays.asList("AWSCURRENT"));

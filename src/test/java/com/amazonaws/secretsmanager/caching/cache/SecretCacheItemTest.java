@@ -13,15 +13,17 @@
 
 package com.amazonaws.secretsmanager.caching.cache;
 
+import com.amazonaws.secretsmanager.caching.SecretCacheConfiguration;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
 public class SecretCacheItemTest {
     @Test
     public void cacheItemEqualsTest() {
-        SecretCacheItem i1 = new SecretCacheItem("test", null, null);
-        SecretCacheItem i2 = new SecretCacheItem("test", null, null);
-        SecretCacheItem i3 = new SecretCacheItem("test3", null, null);
+        SecretCacheConfiguration config = new SecretCacheConfiguration();
+        SecretCacheItem i1 = new SecretCacheItem("test", null, config);
+        SecretCacheItem i2 = new SecretCacheItem("test", null, config);
+        SecretCacheItem i3 = new SecretCacheItem("test3", null, config);
         Assert.assertEquals(i1, i2);
         Assert.assertNotEquals(i1, null);
         Assert.assertNotEquals(i1, i3);

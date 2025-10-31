@@ -13,16 +13,18 @@
 
 package com.amazonaws.secretsmanager.caching.cache;
 
+import com.amazonaws.secretsmanager.caching.SecretCacheConfiguration;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
 public class SecretCacheVersionTest {
     @Test
     public void cacheVersionEqualsTest() {
-        SecretCacheVersion i1 = new SecretCacheVersion("test", "version", null, null);
-        SecretCacheVersion i2 = new SecretCacheVersion("test", "version", null, null);
-        SecretCacheVersion i3 = new SecretCacheVersion("test3", "version", null, null);
-        SecretCacheVersion i4 = new SecretCacheVersion("test", "version4", null, null);
+        SecretCacheConfiguration config = new SecretCacheConfiguration();
+        SecretCacheVersion i1 = new SecretCacheVersion("test", "version", null, config);
+        SecretCacheVersion i2 = new SecretCacheVersion("test", "version", null, config);
+        SecretCacheVersion i3 = new SecretCacheVersion("test3", "version", null, config);
+        SecretCacheVersion i4 = new SecretCacheVersion("test", "version4", null, config);
         Assert.assertEquals(i1, i2);
         Assert.assertNotEquals(i1, null);
         Assert.assertNotEquals(i1, i3);
