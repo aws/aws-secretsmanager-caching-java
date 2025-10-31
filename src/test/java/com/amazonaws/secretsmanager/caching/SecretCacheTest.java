@@ -343,6 +343,7 @@ public class SecretCacheTest {
         // Verify that the refresh occurred after the ttl
         Mockito.verify(asm, Mockito.times(2)).describeSecret(Mockito.any(DescribeSecretRequest.class));
         Mockito.verify(asm, Mockito.times(1)).getSecretValue(Mockito.any(GetSecretValueRequest.class));
+        sc.close();
     }
 
     @Test
@@ -376,6 +377,7 @@ public class SecretCacheTest {
         // Verify that the refresh occurred after the ttl
         Mockito.verify(asm, Mockito.times(2)).describeSecret(Mockito.any(DescribeSecretRequest.class));
         Mockito.verify(asm, Mockito.times(2)).getSecretValue(Mockito.any(GetSecretValueRequest.class));
+        sc.close();
     }
 
     @Test
