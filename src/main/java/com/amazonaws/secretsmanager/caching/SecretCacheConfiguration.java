@@ -13,10 +13,10 @@
 
 package com.amazonaws.secretsmanager.caching;
 
-import java.util.concurrent.TimeUnit;
-
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
+
+import java.time.Duration;
 
 
 /**
@@ -28,17 +28,36 @@ public class SecretCacheConfiguration {
     /** The default cache size. */
     public static final int DEFAULT_MAX_CACHE_SIZE = 1024;
 
-    /** The default TTL for an item stored in cache before access causing a refresh. */
-    public static final long DEFAULT_CACHE_ITEM_TTL = TimeUnit.HOURS.toMillis(1);
+    /**
+     * The default TTL for an item stored in cache before access causing a refresh.
+     */
+    public static final Duration DEFAULT_CACHE_ITEM_TTL_DURATION = Duration.ofHours(1);
+
+    /**
+     * The default TTL for an item stored in cache before access causing a refresh.
+     * 
+     * @deprecated use DEFAULT_CACHE_ITEM_TTL_DURATION instead.
+     */
+    @Deprecated
+    public static final long DEFAULT_CACHE_ITEM_TTL = DEFAULT_CACHE_ITEM_TTL_DURATION.toMillis();
 
     /** The default version stage to use when retrieving secret values. */
     public static final String DEFAULT_VERSION_STAGE = "AWSCURRENT";
 
-    /** 
-     * The default maximum jitter value in milliseconds to use when forcing a refresh.
+    /**
+     * The default maximum jitter value to use when forcing a refresh.
      * This prevents continuous refreshNow() calls by adding a random sleep.
      */
-    public static final long DEFAULT_FORCE_REFRESH_JITTER = 100;
+    public static final Duration DEFAULT_FORCE_REFRESH_JITTER_DURATION = Duration.ofMillis(100);
+
+    /**
+     * The default maximum jitter value to use when forcing a refresh.
+     * This prevents continuous refreshNow() calls by adding a random sleep.
+     * 
+     * @deprecated use DEFAULT_FORCE_REFRESH_JITTER_DURATION instead
+     */
+    @Deprecated
+    public static final long DEFAULT_FORCE_REFRESH_JITTER = DEFAULT_FORCE_REFRESH_JITTER_DURATION.toMillis();
 
     /** The client this cache instance will use for accessing AWS Secrets Manager. */
     private SecretsManagerClient client = null;
@@ -53,12 +72,12 @@ public class SecretCacheConfiguration {
     private int maxCacheSize = DEFAULT_MAX_CACHE_SIZE;
 
     /**
-     * The number of milliseconds that a cached item is considered valid before
-     * requiring a refresh of the secret state.  Items that have exceeded this
-     * TTL will be refreshed synchronously when requesting the secret value.  If
+     * The duration that a cached item is considered valid before
+     * requiring a refresh of the secret state. Items that have exceeded this
+     * TTL will be refreshed synchronously when requesting the secret value. If
      * the synchronous refresh failed, the stale secret will be returned.
      */
-    private long cacheItemTTL = DEFAULT_CACHE_ITEM_TTL;
+    private Duration cacheItemTTL = DEFAULT_CACHE_ITEM_TTL_DURATION;
 
     /**
      * The version stage that will be used when requesting the secret values for
@@ -66,12 +85,7 @@ public class SecretCacheConfiguration {
      */
     private String versionStage = DEFAULT_VERSION_STAGE;
 
-    /**
-     * When forcing a refresh using the refreshNow method, a random sleep
-     * will be performed using this value.  This helps prevent code from
-     * executing a refreshNow in a continuous loop without waiting.
-     */
-    private long forceRefreshJitterMillis = DEFAULT_FORCE_REFRESH_JITTER;
+    private Duration forceRefreshJitter = DEFAULT_FORCE_REFRESH_JITTER_DURATION;
 
     /**
      * Default constructor for the SecretCacheConfiguration object.
@@ -186,10 +200,21 @@ public class SecretCacheConfiguration {
 
     /**
      * Returns the TTL for the cached items.
+     * @deprecated use getCacheItemTTLDuration() instead
      *
      * @return The TTL in milliseconds before refreshing cached items.
      */
+    @Deprecated
     public long getCacheItemTTL() {
+        return this.cacheItemTTL.toMillis();
+    }
+
+    /**
+     * Returns the TTL for the cached items.
+     *
+     * @return The TTL in milliseconds before refreshing cached items.
+     */
+    public Duration getCacheItemTTLDuration() {
         return this.cacheItemTTL;
     }
 
@@ -197,10 +222,23 @@ public class SecretCacheConfiguration {
      * Sets the TTL in milliseconds for the cached items.  Once cached items exceed this
      * TTL, the item will be refreshed using the AWS Secrets Manager client.
      *
+     * @deprecated use setCacheItemTTL(Duration cacheItemTTL) instead
      * @param cacheItemTTL
      *            The TTL for cached items before requiring a refresh.
      */
+    @Deprecated
     public void setCacheItemTTL(long cacheItemTTL) {
+        this.cacheItemTTL = Duration.ofMillis(cacheItemTTL);
+    }
+
+    /**
+     * Sets the TTL for the cached items.  Once cached items exceed this
+     * TTL, the item will be refreshed using the AWS Secrets Manager client.
+     *
+     * @param cacheItemTTL
+     *            The TTL for cached items before requiring a refresh.
+     */
+    public void setCacheItemTTL(Duration cacheItemTTL) {
         this.cacheItemTTL = cacheItemTTL;
     }
 
@@ -208,11 +246,25 @@ public class SecretCacheConfiguration {
      * Sets the TTL in milliseconds for the cached items.  Once cached items exceed this
      * TTL, the item will be refreshed using the AWS Secrets Manager client.
      *
+     * @deprecated use withCacheItemTTL(Duration cacheItemTTL) instead
      * @param cacheItemTTL
      *            The TTL for cached items before requiring a refresh.
      * @return The updated ClientConfiguration object with the new TTL setting.
      */
+    @Deprecated
     public SecretCacheConfiguration withCacheItemTTL(long cacheItemTTL) {
+        this.setCacheItemTTL(cacheItemTTL);
+        return this;
+    }
+
+    /**
+     * Sets the TTL for the cached items. Once cached items exceed this
+     * TTL, the item will be refreshed using the AWS Secrets Manager client.
+     *
+     * @param cacheItemTTL The TTL for cached items before requiring a refresh.
+     * @return The updated ClientConfiguration object with the new TTL setting.
+     */
+    public SecretCacheConfiguration withCacheItemTTL(Duration cacheItemTTL) {
         this.setCacheItemTTL(cacheItemTTL);
         return this;
     }
@@ -252,43 +304,94 @@ public class SecretCacheConfiguration {
 
     /**
      * Returns the refresh jitter that is used when force refreshing secrets.
+     * 
+     * @deprecated use getForceRefreshJitter() instead
      *
-     * @return The maximum jitter sleep time in milliseconds used with refreshing secrets.
+     * @return The maximum jitter sleep time in milliseconds used with refreshing
+     *         secrets.
      */
+    @Deprecated
     public long getForceRefreshJitterMillis() {
-        return this.forceRefreshJitterMillis;
+        return this.forceRefreshJitter.toMillis();
+    }
+
+    /**
+     * Returns the refresh jitter that is used when force refreshing secrets.
+     *
+     * @return The jitter sleep time used with refreshing secrets.
+     */
+    public Duration getForceRefreshJitter() {
+        return this.forceRefreshJitter;
     }
 
     /**
      * Sets the maximum sleep time in milliseconds between force refresh calls.
      * This value is used to prevent continuous refreshNow() calls in tight loops
-     * by adding a random sleep between half the configured value and the full value.
+     * by adding a random sleep between half the configured value and the full
+     * value.
+     * The value must be greater than or equal to zero.
+     * 
+     * @deprecated use setForceRefreshJitter(Duration forceRefreshJitter) instead
+     *
+     * @param forceRefreshJitterMillis The maximum sleep time in milliseconds
+     *                                 between force refresh calls.
+     * @throws IllegalArgumentException if the value is negative
+     */
+    @Deprecated
+    public void setForceRefreshJitterMillis(long forceRefreshJitterMillis) {
+        this.setForceRefreshJitter(Duration.ofMillis(forceRefreshJitterMillis));
+    }
+
+    /**
+     * Sets the maximum sleep time between force refresh calls.
+     * This value is used to prevent continuous refreshNow() calls in tight loops
+     * by adding a random sleep between half the configured value and the full
+     * value.
      * The value must be greater than or equal to zero.
      *
-     * @param forceRefreshJitterMillis
-     *            The maximum sleep time in milliseconds between force refresh calls.
+     * @param forceRefreshJitter The maximum sleep time between force refresh calls.
      * @throws IllegalArgumentException if the value is negative
      */
-    public void setForceRefreshJitterMillis(long forceRefreshJitterMillis) {
-        if (forceRefreshJitterMillis < 0) {
+    public void setForceRefreshJitter(Duration forceRefreshJitter) {
+        if (forceRefreshJitter.isNegative()) {
             throw new IllegalArgumentException("Force refresh jitter must be greater than or equal to zero");
         }
-        this.forceRefreshJitterMillis = forceRefreshJitterMillis;
+        this.forceRefreshJitter = forceRefreshJitter;
     }
 
     /**
      * Sets the maximum sleep time in milliseconds between force refresh calls.
      * This value is used to prevent continuous refreshNow() calls in tight loops
-     * by adding a random sleep between half the configured value and the full value.
+     * by adding a random sleep between half the configured value and the full
+     * value.
+     * 
+     * @deprecated use withForceRefreshJitter(Duration forceRefreshJitter) instead
      *
-     * @param forceRefreshJitterMillis
-     *            The maximum sleep time in milliseconds between force refresh calls.
-     * @return The updated ClientConfiguration object with the new refresh sleep time.
+     * @param forceRefreshJitterMillis The maximum sleep time in milliseconds
+     *                                 between force refresh calls.
+     * @return The updated ClientConfiguration object with the new refresh sleep
+     *         time.
      * @throws IllegalArgumentException if the value is negative
      */
+    @Deprecated
     public SecretCacheConfiguration withForceRefreshJitterMillis(long forceRefreshJitterMillis) {
         this.setForceRefreshJitterMillis(forceRefreshJitterMillis);
         return this;
     }
 
+    /**
+     * Sets the maximum sleep time between force refresh calls.
+     * This value is used to prevent continuous refreshNow() calls in tight loops
+     * by adding a random sleep between half the configured value and the full
+     * value.
+     *
+     * @param forceRefreshJitter The maximum sleep time between force refresh calls.
+     * @return The updated ClientConfiguration object with the new refresh sleep
+     *         time.
+     * @throws IllegalArgumentException if the value is negative
+     */
+    public SecretCacheConfiguration withForceRefreshJitter(Duration forceRefreshJitter) {
+        this.setForceRefreshJitter(forceRefreshJitter);
+        return this;
+    }
 }
