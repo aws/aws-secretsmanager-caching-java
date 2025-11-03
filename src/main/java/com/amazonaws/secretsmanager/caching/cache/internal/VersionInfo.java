@@ -19,12 +19,12 @@ package com.amazonaws.secretsmanager.caching.cache.internal;
  */
 public class VersionInfo {
     /**
-     * Version number.
+     * Library version number
      */
     public static final String RELEASE_VERSION = "1.1.0";
 
     /**
-     * User agent string when making requests to AWS Secrets Manager.
+     * User agent for AWS Secrets Manager API calls.
      */
     public static final String USER_AGENT = "AwsSecretCache/" + RELEASE_VERSION;
 
