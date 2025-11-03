@@ -16,6 +16,7 @@ package com.amazonaws.secretsmanager.caching.cache;
 import com.amazonaws.AmazonWebServiceRequest;
 import com.amazonaws.services.secretsmanager.AWSSecretsManager;
 import com.amazonaws.services.secretsmanager.model.GetSecretValueResult;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import com.amazonaws.secretsmanager.caching.cache.internal.VersionInfo;
 import com.amazonaws.secretsmanager.caching.SecretCacheConfiguration;
 
@@ -23,6 +24,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Basic secret caching object.
@@ -61,7 +63,7 @@ public abstract class SecretCacheObject<T> {
     protected final SecretCacheConfiguration config;
 
     /** A flag to indicate a refresh is needed. */
-    private boolean refreshNeeded = true;
+    private AtomicBoolean refreshNeeded = new AtomicBoolean(true);
 
     /** The result of the last AWS Secrets Manager request for this item. */
     private Object data = null;
@@ -96,6 +98,7 @@ public abstract class SecretCacheObject<T> {
      * @param config
      *            The secret cache configuration.
      */
+    @SuppressFBWarnings("EI_EXPOSE_REP2")
     public SecretCacheObject(final String secretId,
                              final AWSSecretsManager client,
                              final SecretCacheConfiguration config) {
@@ -160,7 +163,7 @@ public abstract class SecretCacheObject<T> {
      * @return True if the secret item should be refreshed.
      */
     protected boolean isRefreshNeeded() {
-        if (this.refreshNeeded) { return true; }
+        if (this.refreshNeeded.get()) { return true; }
         if (null != this.exception) {
             // If we encountered an exception on the last attempt
             // we do not want to keep retrying without a pause between
@@ -183,7 +186,7 @@ public abstract class SecretCacheObject<T> {
      */
     private void refresh() {
         if (!this.isRefreshNeeded()) { return; }
-        this.refreshNeeded = false;
+        this.refreshNeeded.set(false);
         try {
             this.setResult(this.executeRefresh());
             this.exception = null;
@@ -255,7 +258,7 @@ public abstract class SecretCacheObject<T> {
      *             If the thread is interrupted while waiting for the refresh.
      */
     public boolean refreshNow() throws InterruptedException {
-        this.refreshNeeded = true;
+        this.refreshNeeded.set(true);
         // When forcing a refresh, always sleep with a random jitter
         // to prevent coding errors that could be calling refreshNow
         // in a loop.
@@ -285,6 +288,7 @@ public abstract class SecretCacheObject<T> {
      *
      * @return The cached GetSecretValue result.
      */
+    @SuppressFBWarnings("THROWS_METHOD_THROWS_RUNTIMEEXCEPTION")
     public GetSecretValueResult getSecretValue() {
         synchronized (lock) {
             refresh();
