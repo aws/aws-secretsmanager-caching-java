@@ -41,6 +41,11 @@ public class SecretCacheItem extends SecretCacheObject<DescribeSecretResponse> {
      * after this time, the item will be synchronously refreshed.
      */
     private Instant nextRefreshTime = Instant.ofEpochMilli(0);
+
+    /**
+     * Fixed delay with jitter strategy used to set the next DescribeSecret call time.
+     * Returns a value from 0 to the cache item TTL.
+     */
     private FixedDelayWithJitter fixedDelayWithJitter;
 
     /**

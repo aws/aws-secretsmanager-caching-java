@@ -423,7 +423,6 @@ public class SecretCacheTest {
     @Test
     public void basicSecretCacheRefreshNullVersionIdsToStagesReturnsNull() throws Throwable {
         Mockito.when(describeSecretResponse.versionIdsToStages()).thenReturn(null);
-
         Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class))).thenReturn(describeSecretResponse);
 
         SecretCache sc = new SecretCache(new SecretCacheConfiguration()
