@@ -53,7 +53,7 @@ public class SecretCacheTest {
     @BeforeMethod
     public void setUp() {
         getSecretValueResult = new GetSecretValueResult().withVersionStages(Arrays.asList("v1"));
-        MockitoAnnotations.initMocks(this);
+        MockitoAnnotations.openMocks(this);
         Mockito.when(asm.describeSecret(Mockito.any())).thenReturn(describeSecretResult);
         Mockito.when(asm.getSecretValue(Mockito.any())).thenReturn(getSecretValueResult);
     }
@@ -276,6 +276,7 @@ public class SecretCacheTest {
         // Verify that the refresh occurred after the ttl
         Mockito.verify(asm, Mockito.times(2)).describeSecret(Mockito.any());
         Mockito.verify(asm, Mockito.times(1)).getSecretValue(Mockito.any());
+        sc.close();
     }
 
     @Test
@@ -305,6 +306,7 @@ public class SecretCacheTest {
         // Verify that the refresh occurred after the ttl
         Mockito.verify(asm, Mockito.times(2)).describeSecret(Mockito.any());
         Mockito.verify(asm, Mockito.times(2)).getSecretValue(Mockito.any());
+        sc.close();
     }
 
     @Test
