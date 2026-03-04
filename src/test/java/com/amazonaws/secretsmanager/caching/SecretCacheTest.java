@@ -502,6 +502,7 @@ public class SecretCacheTest {
     public void testSecretCacheWithPQTLSEnabled() {
         // Verify cache can be created with PQTLS enabled without errors
         SecretCacheConfiguration config = new SecretCacheConfiguration()
+            .withClient(asm) 
             .withPostQuantumTlsEnabled(true);
         
         SecretCache cache = new SecretCache(config);
