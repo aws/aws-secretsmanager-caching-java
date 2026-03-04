@@ -509,4 +509,23 @@ public class SecretCacheTest {
         Assert.assertNotNull(cache);
         cache.close();
     }
+
+    @Test
+    public void testSecretCacheWithPQTLSEnabledNoClient() {
+        String originalRegion = System.getProperty("aws.region");
+        try {
+            System.setProperty("aws.region", "us-east-1");
+            SecretCacheConfiguration config = new SecretCacheConfiguration()
+                .withPostQuantumTlsEnabled(true);  // No .withClient() call
+            SecretCache cache = new SecretCache(config);
+            Assert.assertNotNull(cache);
+            cache.close();
+        } finally {
+            if (originalRegion != null) {
+                System.setProperty("aws.region", originalRegion);
+            } else {
+                System.clearProperty("aws.region");
+            }
+        }
+    }
 }
