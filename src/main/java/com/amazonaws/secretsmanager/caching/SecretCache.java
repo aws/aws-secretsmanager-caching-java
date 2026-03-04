@@ -23,6 +23,7 @@ import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClientBuilder;
 import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueResponse;
+import software.amazon.awssdk.http.crt.AwsCrtHttpClient;
 
 /**
  * Provides the primary entry-point to the AWS Secrets Manager client cache SDK.
@@ -101,8 +102,21 @@ public class SecretCache implements AutoCloseable {
         this.config = config;
         ClientOverrideConfiguration defaultOverride = ClientOverrideConfiguration.builder()
                 .putAdvancedOption(SdkAdvancedClientOption.USER_AGENT_SUFFIX, VersionInfo.USER_AGENT).build();
-        this.client = config.getClient() != null ? config.getClient()
-                : SecretsManagerClient.builder().overrideConfiguration(defaultOverride).build();
+
+        if (config.getClient() != null) {
+            this.client = config.getClient();
+        } else if (config.isPostQuantumTlsEnabled()) {
+            this.client = SecretsManagerClient.builder()
+                .httpClient(AwsCrtHttpClient.builder()
+                .postQuantumTlsEnabled(true)
+                .build())
+            .overrideConfiguration(defaultOverride)
+            .build();
+        } else {
+            this.client = SecretsManagerClient.builder()
+                .overrideConfiguration(defaultOverride)
+                .build();
+        }
     }
 
     /**

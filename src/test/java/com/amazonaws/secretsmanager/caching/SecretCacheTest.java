@@ -482,4 +482,30 @@ public class SecretCacheTest {
         sc.close();
     }
 
+    @Test
+    public void testPostQuantumTlsConfiguration() {
+        // Test default is false
+        SecretCacheConfiguration config = new SecretCacheConfiguration();
+        Assert.assertFalse(config.isPostQuantumTlsEnabled());
+        
+        // Test setter
+        config.setPostQuantumTlsEnabled(true);
+        Assert.assertTrue(config.isPostQuantumTlsEnabled());
+        
+        // Test fluent method
+        SecretCacheConfiguration config2 = new SecretCacheConfiguration()
+            .withPostQuantumTlsEnabled(true);
+        Assert.assertTrue(config2.isPostQuantumTlsEnabled());
+    }
+
+    @Test
+    public void testSecretCacheWithPQTLSEnabled() {
+        // Verify cache can be created with PQTLS enabled without errors
+        SecretCacheConfiguration config = new SecretCacheConfiguration()
+            .withPostQuantumTlsEnabled(true);
+        
+        SecretCache cache = new SecretCache(config);
+        Assert.assertNotNull(cache);
+        cache.close();
+    }
 }
