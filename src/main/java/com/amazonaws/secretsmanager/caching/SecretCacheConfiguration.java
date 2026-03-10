@@ -307,6 +307,10 @@ public class SecretCacheConfiguration {
     /**
      * Sets whether to enable Post-Quantum TLS.
      *
+     * <p>Note: This setting is mutually exclusive with providing a custom client via 
+     * {@link #withClient(SecretsManagerClient)}. If both are specified, an 
+     * {@link IllegalArgumentException} will be thrown.
+     * 
      * @param postQuantumTlsEnabled
      *            Whether to enable Post-Quantum TLS.
      */
@@ -316,7 +320,11 @@ public class SecretCacheConfiguration {
 
     /**
      * Sets whether to enable Post-Quantum TLS.
-     *
+     * 
+     * <p>Note: This setting is mutually exclusive with providing a custom client via 
+     * {@link #withClient(SecretsManagerClient)}. If both are specified, an 
+     * {@link IllegalArgumentException} will be thrown.
+     * 
      * @param postQuantumTlsEnabled
      *            Whether to enable Post-Quantum TLS.
      * @return The updated SecretCacheConfiguration object with the new PQTLS setting.

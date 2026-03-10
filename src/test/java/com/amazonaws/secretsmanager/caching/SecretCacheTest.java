@@ -498,16 +498,14 @@ public class SecretCacheTest {
         Assert.assertTrue(config2.isPostQuantumTlsEnabled());
     }
 
-    @Test
+    @Test(expectedExceptions = { IllegalArgumentException.class })
     public void testSecretCacheWithPQTLSEnabled() {
-        // Verify cache can be created with PQTLS enabled without errors
+        // Verify that providing both client and PQTLS flag throws exception
         SecretCacheConfiguration config = new SecretCacheConfiguration()
             .withClient(asm) 
             .withPostQuantumTlsEnabled(true);
         
-        SecretCache cache = new SecretCache(config);
-        Assert.assertNotNull(cache);
-        cache.close();
+        new SecretCache(config);  
     }
 
     @Test

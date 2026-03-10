@@ -18,6 +18,7 @@ import com.amazonaws.secretsmanager.caching.cache.LRUCache;
 import com.amazonaws.secretsmanager.caching.cache.SecretCacheItem;
 import com.amazonaws.secretsmanager.caching.cache.internal.VersionInfo;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
@@ -70,6 +71,8 @@ public class SecretCache implements AutoCloseable {
      * @param builder The builder to use for creating the AWS Secrets Manager
      *                client.
      */
+    @SuppressFBWarnings(value = "CT_CONSTRUCTOR_THROW", 
+        justification = "Delegates to constructor that validates before field initialization")
     public SecretCache(SecretsManagerClientBuilder builder) {
         this(new SecretCacheConfiguration().withClient(builder
                 .overrideConfiguration(
@@ -85,6 +88,8 @@ public class SecretCache implements AutoCloseable {
      * @param client The AWS Secrets Manager client to use for requesting secret
      *               values.
      */
+    @SuppressFBWarnings(value = "CT_CONSTRUCTOR_THROW", 
+        justification = "Delegates to constructor that validates before field initialization")
     public SecretCache(SecretsManagerClient client) {
         this(new SecretCacheConfiguration().withClient(client));
     }
@@ -93,11 +98,22 @@ public class SecretCache implements AutoCloseable {
      * Constructs a new secret cache using the provided cache configuration.
      *
      * @param config The secret cache configuration.
+     * @throws IllegalArgumentException if both a custom client and postQuantumTlsEnabled 
+     *                                  are specified in the configuration.
      */
+    @SuppressFBWarnings(value = "CT_CONSTRUCTOR_THROW", 
+        justification = "Validation occurs before any field initialization")
     public SecretCache(SecretCacheConfiguration config) {
         if (null == config) {
             config = new SecretCacheConfiguration();
         }
+
+        if (config.getClient() != null && config.isPostQuantumTlsEnabled()) {
+            throw new IllegalArgumentException(
+                "Cannot specify both a custom client and postQuantumTlsEnabled. " +
+                "To use PQTLS, omit the custom client or configure your client with PQTLS support.");
+        }
+
         this.cache = new LRUCache<String, SecretCacheItem>(config.getMaxCacheSize());
         this.config = config;
         ClientOverrideConfiguration defaultOverride = ClientOverrideConfiguration.builder()
