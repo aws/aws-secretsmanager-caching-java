@@ -121,17 +121,16 @@ public class SecretCache implements AutoCloseable {
 
         if (config.getClient() != null) {
             this.client = config.getClient();
-        } else if (config.isPostQuantumTlsEnabled()) {
-            this.client = SecretsManagerClient.builder()
-                .httpClient(AwsCrtHttpClient.builder()
-                .postQuantumTlsEnabled(true)
-                .build())
-            .overrideConfiguration(defaultOverride)
-            .build();
         } else {
-            this.client = SecretsManagerClient.builder()
-                .overrideConfiguration(defaultOverride)
-                .build();
+            SecretsManagerClientBuilder builder = SecretsManagerClient.builder();
+            
+            if (config.isPostQuantumTlsEnabled()) {
+                builder.httpClient(AwsCrtHttpClient.builder()
+                    .postQuantumTlsEnabled(true)
+                    .build());
+            }
+        
+            this.client = builder.overrideConfiguration(defaultOverride).build();
         }
     }
 
