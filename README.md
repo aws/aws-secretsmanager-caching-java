@@ -30,7 +30,7 @@ You can get the latest release from Maven:
 <dependency>
   <groupId>com.amazonaws.secretsmanager</groupId>
   <artifactId>aws-secretsmanager-caching-java</artifactId>
-  <version>2.0.0</version>
+  <version>2.2.0</version>
 </dependency>
 ```
 
