@@ -482,4 +482,48 @@ public class SecretCacheTest {
         sc.close();
     }
 
+    @Test
+    public void testPostQuantumTlsConfiguration() {
+        // Test default is false
+        SecretCacheConfiguration config = new SecretCacheConfiguration();
+        Assert.assertFalse(config.isPostQuantumTlsEnabled());
+        
+        // Test setter
+        config.setPostQuantumTlsEnabled(true);
+        Assert.assertTrue(config.isPostQuantumTlsEnabled());
+        
+        // Test fluent method
+        SecretCacheConfiguration config2 = new SecretCacheConfiguration()
+            .withPostQuantumTlsEnabled(true);
+        Assert.assertTrue(config2.isPostQuantumTlsEnabled());
+    }
+
+    @Test(expectedExceptions = { IllegalArgumentException.class })
+    public void testSecretCacheWithPQTLSEnabled() {
+        // Verify that providing both client and PQTLS flag throws exception
+        SecretCacheConfiguration config = new SecretCacheConfiguration()
+            .withClient(asm) 
+            .withPostQuantumTlsEnabled(true);
+        
+        new SecretCache(config);  
+    }
+
+    @Test
+    public void testSecretCacheWithPQTLSEnabledNoClient() {
+        String originalRegion = System.getProperty("aws.region");
+        try {
+            System.setProperty("aws.region", "us-east-1");
+            SecretCacheConfiguration config = new SecretCacheConfiguration()
+                .withPostQuantumTlsEnabled(true);  // No .withClient() call
+            SecretCache cache = new SecretCache(config);
+            Assert.assertNotNull(cache);
+            cache.close();
+        } finally {
+            if (originalRegion != null) {
+                System.setProperty("aws.region", originalRegion);
+            } else {
+                System.clearProperty("aws.region");
+            }
+        }
+    }
 }

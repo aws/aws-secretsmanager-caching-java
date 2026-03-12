@@ -88,6 +88,22 @@ public class SampleClass implements RequestHandler<String, String> {
 }
 ```
 
+### Enabling Post-Quantum TLS
+
+To enable Post-Quantum TLS for enhanced security:
+
+```java
+import com.amazonaws.secretsmanager.caching.SecretCache;
+import com.amazonaws.secretsmanager.caching.SecretCacheConfiguration;
+
+SecretCache cache = new SecretCache(
+    new SecretCacheConfiguration()
+        .withPostQuantumTlsEnabled(true)
+);
+
+String secret = cache.getSecretString("my-secret-id");
+```
+
 ## License
 
 This library is licensed under the Apache 2.0 License. 

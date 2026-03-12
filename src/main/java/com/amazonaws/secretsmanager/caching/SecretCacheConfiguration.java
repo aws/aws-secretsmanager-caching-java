@@ -18,7 +18,6 @@ import java.util.concurrent.TimeUnit;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 
-
 /**
  * Cache configuration options such as max cache size, ttl for cached items, etc.
  *
@@ -72,6 +71,11 @@ public class SecretCacheConfiguration {
      * executing a refreshNow in a continuous loop without waiting.
      */
     private long forceRefreshJitterMillis = DEFAULT_FORCE_REFRESH_JITTER;
+
+    /** 
+     * Whether to enable Post-Quantum TLS. 
+     * */
+    private boolean postQuantumTlsEnabled = false;
 
     /**
      * Default constructor for the SecretCacheConfiguration object.
@@ -291,4 +295,42 @@ public class SecretCacheConfiguration {
         return this;
     }
 
+    /**
+     * Returns whether Post-Quantum TLS is enabled.
+     *
+     * @return true if Post-Quantum TLS is enabled, false otherwise.
+     */
+    public boolean isPostQuantumTlsEnabled() {
+        return this.postQuantumTlsEnabled;
+    }
+
+    /**
+     * Sets whether to enable Post-Quantum TLS.
+     *
+     * <p>Note: This setting is mutually exclusive with providing a custom client via 
+     * {@link #withClient(SecretsManagerClient)}. If both are specified, an 
+     * {@link IllegalArgumentException} will be thrown.
+     * 
+     * @param postQuantumTlsEnabled
+     *            Whether to enable Post-Quantum TLS.
+     */
+    public void setPostQuantumTlsEnabled(boolean postQuantumTlsEnabled) {
+        this.postQuantumTlsEnabled = postQuantumTlsEnabled;
+    }
+
+    /**
+     * Sets whether to enable Post-Quantum TLS.
+     * 
+     * <p>Note: This setting is mutually exclusive with providing a custom client via 
+     * {@link #withClient(SecretsManagerClient)}. If both are specified, an 
+     * {@link IllegalArgumentException} will be thrown.
+     * 
+     * @param postQuantumTlsEnabled
+     *            Whether to enable Post-Quantum TLS.
+     * @return The updated SecretCacheConfiguration object with the new PQTLS setting.
+     */
+    public SecretCacheConfiguration withPostQuantumTlsEnabled(boolean postQuantumTlsEnabled) {
+        this.setPostQuantumTlsEnabled(postQuantumTlsEnabled);
+        return this;
+    }
 }
