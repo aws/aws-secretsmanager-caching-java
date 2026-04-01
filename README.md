@@ -30,7 +30,7 @@ You can get the latest release from Maven:
 <dependency>
   <groupId>com.amazonaws.secretsmanager</groupId>
   <artifactId>aws-secretsmanager-caching-java</artifactId>
-  <version>2.0.0</version>
+  <version>2.2.0</version>
 </dependency>
 ```
 
@@ -86,6 +86,22 @@ public class SampleClass implements RequestHandler<String, String> {
         return "Success!";
     }
 }
+```
+
+### Enabling Post-Quantum TLS
+
+To enable Post-Quantum TLS for enhanced security:
+
+```java
+import com.amazonaws.secretsmanager.caching.SecretCache;
+import com.amazonaws.secretsmanager.caching.SecretCacheConfiguration;
+
+SecretCache cache = new SecretCache(
+    new SecretCacheConfiguration()
+        .withPostQuantumTlsEnabled(true)
+);
+
+String secret = cache.getSecretString("my-secret-id");
 ```
 
 ## License

@@ -14,6 +14,7 @@
 package com.amazonaws.secretsmanager.caching.cache;
 
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.amazonaws.secretsmanager.caching.SecretCacheConfiguration;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -50,7 +51,7 @@ public abstract class SecretCacheObject<T> {
     protected final SecretCacheConfiguration config;
 
     /** A flag to indicate a refresh is needed. */
-    private boolean refreshNeeded = true;
+    private final AtomicBoolean refreshNeeded = new AtomicBoolean(true);
 
     /** The result of the last AWS Secrets Manager request for this item. */
     private Object data = null;
@@ -156,7 +157,9 @@ public abstract class SecretCacheObject<T> {
      * @return True if the secret item should be refreshed.
      */
     protected boolean isRefreshNeeded() {
-        if (this.refreshNeeded) { return true; }
+        if (this.refreshNeeded.get()) {
+            return true;
+        }
         if (null != this.exception) {
             // If we encountered an exception on the last attempt
             // we do not want to keep retrying without a pause between
@@ -179,7 +182,7 @@ public abstract class SecretCacheObject<T> {
      */
     private void refresh() {
         if (!this.isRefreshNeeded()) { return; }
-        this.refreshNeeded = false;
+        this.refreshNeeded.set(false);
         try {
             this.setResult(this.executeRefresh());
             this.exception = null;
@@ -215,7 +218,7 @@ public abstract class SecretCacheObject<T> {
      *             If the thread is interrupted while waiting for the refresh.
      */
     public boolean refreshNow() throws InterruptedException {
-        this.refreshNeeded = true;
+        this.refreshNeeded.set(true);
         // When forcing a refresh, always sleep with a random jitter
         // to prevent coding errors that could be calling refreshNow
         // in a loop.
@@ -246,6 +249,7 @@ public abstract class SecretCacheObject<T> {
      *
      * @return The cached GetSecretValue result.
      */
+    @SuppressFBWarnings("THROWS_METHOD_THROWS_RUNTIMEEXCEPTION")
     public GetSecretValueResponse getSecretValue() {
         return getSecretValue(null, null);
     }
