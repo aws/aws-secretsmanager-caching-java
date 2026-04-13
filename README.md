@@ -104,6 +104,8 @@ SecretCache cache = new SecretCache(
 String secret = cache.getSecretString("my-secret-id");
 ```
 
+**NOTE**: PQ-TLS uses the AWS Common Runtime (CRT) which relies on system libraries and may not work as expected on macOS or Windows at this time ([ref](https://github.com/awslabs/aws-crt-java#tls-behavior)).
+
 ## License
 
 This library is licensed under the Apache 2.0 License. 
