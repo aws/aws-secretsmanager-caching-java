@@ -136,6 +136,61 @@ public class SecretCacheTest {
     }
 
     @Test
+    public void basicSecretCacheVersionIdTest() {
+        final String secret = "basicSecretCacheTest";
+        Map<String, List<String>> versionMap = new HashMap<String, List<String>>();
+        versionMap.put("versionId", Arrays.asList("AWSCURRENT"));
+        versionMap.put("otherVersionId", Arrays.asList("AWSCURRENT"));
+        Mockito.when(describeSecretResponse.versionIdsToStages()).thenReturn(versionMap);
+        GetSecretValueResponse.Builder resBuilder = GetSecretValueResponse.builder().secretString(secret)
+                .secretBinary(SdkBytes.fromByteArray(secret.getBytes()));
+        getSecretValueResponse = resBuilder.build();
+
+        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class))).thenReturn(describeSecretResponse);
+        Mockito.when(asm.getSecretValue(Mockito.any(GetSecretValueRequest.class))).thenReturn(getSecretValueResponse);
+
+        SecretCache sc = new SecretCache(asm);
+
+        // Request the secret multiple times and verify the correct result
+        repeat(10, n -> Assert.assertEquals(sc.getSecretString("", "otherVersionId", null), secret));
+
+        // Verify that multiple requests did not call the API
+        Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any(DescribeSecretRequest.class));
+        Mockito.verify(asm, Mockito.times(1)).getSecretValue(Mockito.any(GetSecretValueRequest.class));
+
+        repeat(10, n -> Assert.assertEquals(sc.getSecretBinary("", "otherVersionId", null),
+                ByteBuffer.wrap(secret.getBytes())));
+        sc.close();
+    }
+
+    @Test
+    public void basicSecretCacheVersionStageTest() {
+        final String secret = "basicSecretCacheTest";
+        Map<String, List<String>> versionMap = new HashMap<String, List<String>>();
+        versionMap.put("versionId", Arrays.asList("AWSCURRENT"));
+        Mockito.when(describeSecretResponse.versionIdsToStages()).thenReturn(versionMap);
+        GetSecretValueResponse.Builder resBuilder = GetSecretValueResponse.builder().secretString(secret)
+                .secretBinary(SdkBytes.fromByteArray(secret.getBytes()));
+        getSecretValueResponse = resBuilder.build();
+
+        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class))).thenReturn(describeSecretResponse);
+        Mockito.when(asm.getSecretValue(Mockito.any(GetSecretValueRequest.class))).thenReturn(getSecretValueResponse);
+
+        SecretCache sc = new SecretCache(asm);
+
+        // Request the secret multiple times and verify the correct result
+        repeat(10, n -> Assert.assertEquals(sc.getSecretString("", null, "AWSCURRENT"), secret));
+
+        // Verify that multiple requests did not call the API
+        Mockito.verify(asm, Mockito.times(1)).describeSecret(Mockito.any(DescribeSecretRequest.class));
+        Mockito.verify(asm, Mockito.times(1)).getSecretValue(Mockito.any(GetSecretValueRequest.class));
+
+        repeat(10, n -> Assert.assertEquals(sc.getSecretBinary("", null, "AWSCURRENT"),
+                ByteBuffer.wrap(secret.getBytes())));
+        sc.close();
+    }
+
+    @Test
     public void hookSecretCacheTest() {
         final String secret = "hookSecretCacheTest";
         Map<String, List<String>> versionMap = new HashMap<String, List<String>>();

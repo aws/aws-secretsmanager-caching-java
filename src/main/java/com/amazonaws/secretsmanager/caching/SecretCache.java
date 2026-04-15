@@ -157,11 +157,26 @@ public class SecretCache implements AutoCloseable {
      * @return The string secret
      */
     public String getSecretString(final String secretId) {
+        return getSecretString(secretId, null, null);
+    }
+
+    /**
+     * Retrieve and cache a secret string from AWS Secrets Manager.
+     *
+     * @param secretId the secret ID of the desired secret.
+     * @param versionId the version ID of the desired secret (optional, can be null).
+     * @param versionStage the version stage of the desired secret (optional, can be null).
+     *
+     * @return The secret string for the desired secret.
+     */
+    public String getSecretString(final String secretId, final String versionId, final String versionStage) {
         SecretCacheItem secret = this.getCachedSecret(secretId);
-        GetSecretValueResponse gsv = secret.getSecretValue();
-        if (null == gsv) {
+        GetSecretValueResponse gsv = secret.getSecretValue(versionId, versionStage);
+
+        if (gsv == null) {
             return null;
         }
+
         return gsv.secretString();
     }
 
@@ -172,11 +187,26 @@ public class SecretCache implements AutoCloseable {
      * @return The binary secret
      */
     public ByteBuffer getSecretBinary(final String secretId) {
+        return getSecretBinary(secretId, null, null);
+    }
+
+    /**
+     * Retrieve and cache a secret binary from AWS Secrets Manager.
+     *
+     * @param secretId the secret ID of the desired secret.
+     * @param versionId the version ID of the desired secret (optional, can be null).
+     * @param versionStage the version stage of the desired secret (optional, can be null).
+     *
+     * @return The secret binary for the desired secret.
+     */
+    public ByteBuffer getSecretBinary(final String secretId, final String versionId, final String versionStage) {
         SecretCacheItem secret = this.getCachedSecret(secretId);
-        GetSecretValueResponse gsv = secret.getSecretValue();
-        if (null == gsv) {
+        GetSecretValueResponse gsv = secret.getSecretValue(versionId, versionStage);
+
+        if (gsv == null) {
             return null;
         }
+
         return gsv.secretBinary().asByteBuffer();
     }
 
