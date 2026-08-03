@@ -66,18 +66,15 @@ public final class VersionInfo {
      * @return the resolved version, or {@link #UNKNOWN_VERSION}.
      */
     private static String resolveVersion() {
-        try (InputStream in = VersionInfo.class.getResourceAsStream(VERSION_RESOURCE)) {
-            return readVersion(in);
-        } catch (IOException e) {
-            return UNKNOWN_VERSION;
-        }
+        return readVersion(VersionInfo.class.getResourceAsStream(VERSION_RESOURCE));
     }
 
     /**
-     * Parses the {@code version} property from the given stream.
+     * Parses the {@code version} property from the given stream, closing the
+     * stream before returning.
      *
-     * @param in the properties stream (may be {@code null}); the caller retains
-     *           ownership and is responsible for closing it.
+     * @param in the properties stream (may be {@code null}); this method takes
+     *           ownership and closes it.
      * @return the version value, or {@link #UNKNOWN_VERSION} when the stream is
      *         {@code null}, unreadable, missing the key, blank, or still contains
      *         an unsubstituted Maven placeholder.
@@ -86,21 +83,21 @@ public final class VersionInfo {
         if (in == null) {
             return UNKNOWN_VERSION;
         }
-        Properties properties = new Properties();
-        try {
-            properties.load(in);
+        try (InputStream stream = in) {
+            Properties properties = new Properties();
+            properties.load(stream);
+            String version = properties.getProperty(VERSION_KEY);
+            if (version == null) {
+                return UNKNOWN_VERSION;
+            }
+            version = version.trim();
+            if (version.isEmpty() || version.contains("${")) {
+                return UNKNOWN_VERSION;
+            }
+            return version;
         } catch (IOException e) {
             return UNKNOWN_VERSION;
         }
-        String version = properties.getProperty(VERSION_KEY);
-        if (version == null) {
-            return UNKNOWN_VERSION;
-        }
-        version = version.trim();
-        if (version.isEmpty() || version.contains("${")) {
-            return UNKNOWN_VERSION;
-        }
-        return version;
     }
 
     /**

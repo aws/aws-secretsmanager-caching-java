@@ -1,6 +1,7 @@
 package com.amazonaws.secretsmanager.caching.internal;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
@@ -50,6 +51,25 @@ public class VersionInfoTest {
     @Test
     public void readVersionFallsBackOnUnfilteredPlaceholder() {
         InputStream in = new ByteArrayInputStream("version=${project.version}".getBytes(StandardCharsets.UTF_8));
+
+        Assert.assertEquals(VersionInfo.readVersion(in), VersionInfo.UNKNOWN_VERSION);
+    }
+
+    @Test
+    public void readVersionFallsBackOnEmptyValue() {
+        InputStream in = new ByteArrayInputStream("version=".getBytes(StandardCharsets.UTF_8));
+
+        Assert.assertEquals(VersionInfo.readVersion(in), VersionInfo.UNKNOWN_VERSION);
+    }
+
+    @Test
+    public void readVersionFallsBackOnIoException() {
+        InputStream in = new InputStream() {
+            @Override
+            public int read() throws IOException {
+                throw new IOException("simulated read failure");
+            }
+        };
 
         Assert.assertEquals(VersionInfo.readVersion(in), VersionInfo.UNKNOWN_VERSION);
     }
