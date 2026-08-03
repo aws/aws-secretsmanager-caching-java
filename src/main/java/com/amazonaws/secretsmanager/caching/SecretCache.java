@@ -68,22 +68,48 @@ public class SecretCache implements AutoCloseable {
      * using the
      * provided builder.
      *
+     * <p>
+     * Any UserAgent suffix already configured on the builder is preserved: the
+     * caching client identifier ({@code AwsSecretCache/<version>}) is appended to
+     * it rather than overwriting it.
+     *
      * @param builder The builder to use for creating the AWS Secrets Manager
      *                client.
      */
     @SuppressFBWarnings(value = "CT_CONSTRUCTOR_THROW", 
         justification = "Delegates to constructor that validates before field initialization")
     public SecretCache(SecretsManagerClientBuilder builder) {
-        this(new SecretCacheConfiguration().withClient(builder
-                .overrideConfiguration(
-                        builder.overrideConfiguration().toBuilder()
-                                .putAdvancedOption(SdkAdvancedClientOption.USER_AGENT_SUFFIX, VersionInfo.USER_AGENT)
-                                .build())
-                .build()));
+        this(new SecretCacheConfiguration().withClient(buildClientWithUserAgent(builder)));
+    }
+
+    /**
+     * Builds a client from the provided builder, appending the caching client
+     * UserAgent identifier while preserving any suffix the caller already set.
+     *
+     * @param builder The caller-provided builder.
+     * @return The built AWS Secrets Manager client.
+     */
+    private static SecretsManagerClient buildClientWithUserAgent(SecretsManagerClientBuilder builder) {
+        ClientOverrideConfiguration existingOverride = builder.overrideConfiguration();
+        String callerSuffix = existingOverride
+                .advancedOption(SdkAdvancedClientOption.USER_AGENT_SUFFIX).orElse(null);
+        ClientOverrideConfiguration mergedOverride = existingOverride.toBuilder()
+                .putAdvancedOption(SdkAdvancedClientOption.USER_AGENT_SUFFIX,
+                        VersionInfo.userAgentSuffix(callerSuffix))
+                .build();
+        return builder.overrideConfiguration(mergedOverride).build();
     }
 
     /**
      * Constructs a new secret cache using the provided AWS Secrets Manager client.
+     *
+     * <p>
+     * Note: a pre-built {@link SecretsManagerClient} is immutable, so the caching
+     * client UserAgent identifier ({@code AwsSecretCache/<version>}) cannot be
+     * appended to it here. Callers who want the caching identifier reported in
+     * service logs should instead pass a {@link SecretsManagerClientBuilder} (via
+     * {@link #SecretCache(SecretsManagerClientBuilder)}), which preserves any
+     * existing suffix and appends the caching identifier.
      *
      * @param client The AWS Secrets Manager client to use for requesting secret
      *               values.
@@ -117,7 +143,8 @@ public class SecretCache implements AutoCloseable {
         this.cache = new LRUCache<String, SecretCacheItem>(config.getMaxCacheSize());
         this.config = config;
         ClientOverrideConfiguration defaultOverride = ClientOverrideConfiguration.builder()
-                .putAdvancedOption(SdkAdvancedClientOption.USER_AGENT_SUFFIX, VersionInfo.USER_AGENT).build();
+                .putAdvancedOption(SdkAdvancedClientOption.USER_AGENT_SUFFIX,
+                        VersionInfo.userAgentSuffix(null)).build();
 
         if (config.getClient() != null) {
             this.client = config.getClient();
