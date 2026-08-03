@@ -30,9 +30,11 @@ You can get the latest release from Maven:
 <dependency>
   <groupId>com.amazonaws.secretsmanager</groupId>
   <artifactId>aws-secretsmanager-caching-java</artifactId>
-  <version>2.2.0</version>
+  <version>x.y.z</version>
 </dependency>
 ```
+
+Replace `x.y.z` with the latest version, which you can find on [Maven Central](https://central.sonatype.com/artifact/com.amazonaws.secretsmanager/aws-secretsmanager-caching-java).
 
 Don't forget to enable the download of snapshot jars from Maven:
 

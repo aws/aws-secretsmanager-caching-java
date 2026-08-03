@@ -71,6 +71,15 @@
         </dependency>
     </dependencies>
     <build>
+        <resources>
+            <!-- Filter version.properties so ${project.version} is substituted at build time.
+                 This makes pom.xml the single source of truth for the version reported in the
+                 SDK UserAgent header (read at runtime by VersionInfo). -->
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

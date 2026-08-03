@@ -24,6 +24,7 @@ import java.util.function.IntConsumer;
 
 import org.mockito.ArgumentMatcher;
 import org.mockito.ArgumentMatchers;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -32,12 +33,16 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
+import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClientBuilder;
 import software.amazon.awssdk.services.secretsmanager.model.DescribeSecretRequest;
 import software.amazon.awssdk.services.secretsmanager.model.DescribeSecretResponse;
 import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueRequest;
 import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueResponse;
+
+import com.amazonaws.secretsmanager.caching.cache.internal.VersionInfo;
 
 /**
  * SecretCacheTest.
@@ -525,5 +530,42 @@ public class SecretCacheTest {
                 System.clearProperty("aws.region");
             }
         }
+    }
+
+    @Test
+    public void builderPathPreservesAndAppendsUserAgent() {
+        // A caller who already configured their own UserAgent suffix on the builder.
+        SecretsManagerClientBuilder builder = Mockito.mock(SecretsManagerClientBuilder.class);
+        ClientOverrideConfiguration existing = ClientOverrideConfiguration.builder()
+                .putAdvancedOption(SdkAdvancedClientOption.USER_AGENT_SUFFIX, "MyApp/9.9").build();
+        Mockito.when(builder.overrideConfiguration()).thenReturn(existing);
+        Mockito.when(builder.overrideConfiguration(Mockito.any(ClientOverrideConfiguration.class))).thenReturn(builder);
+        Mockito.when(builder.build()).thenReturn(asm);
+
+        new SecretCache(builder).close();
+
+        ArgumentCaptor<ClientOverrideConfiguration> captor = ArgumentCaptor.forClass(ClientOverrideConfiguration.class);
+        Mockito.verify(builder).overrideConfiguration(captor.capture());
+        String suffix = captor.getValue().advancedOption(SdkAdvancedClientOption.USER_AGENT_SUFFIX).orElse(null);
+
+        Assert.assertEquals(suffix, "MyApp/9.9 " + VersionInfo.USER_AGENT);
+    }
+
+    @Test
+    public void builderPathSetsOursWhenNoCallerSuffix() {
+        // A caller who did not configure any UserAgent suffix.
+        SecretsManagerClientBuilder builder = Mockito.mock(SecretsManagerClientBuilder.class);
+        ClientOverrideConfiguration existing = ClientOverrideConfiguration.builder().build();
+        Mockito.when(builder.overrideConfiguration()).thenReturn(existing);
+        Mockito.when(builder.overrideConfiguration(Mockito.any(ClientOverrideConfiguration.class))).thenReturn(builder);
+        Mockito.when(builder.build()).thenReturn(asm);
+
+        new SecretCache(builder).close();
+
+        ArgumentCaptor<ClientOverrideConfiguration> captor = ArgumentCaptor.forClass(ClientOverrideConfiguration.class);
+        Mockito.verify(builder).overrideConfiguration(captor.capture());
+        String suffix = captor.getValue().advancedOption(SdkAdvancedClientOption.USER_AGENT_SUFFIX).orElse(null);
+
+        Assert.assertEquals(suffix, VersionInfo.USER_AGENT);
     }
 }
