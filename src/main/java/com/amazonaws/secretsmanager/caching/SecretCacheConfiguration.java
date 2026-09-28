@@ -13,6 +13,7 @@
 
 package com.amazonaws.secretsmanager.caching;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -38,6 +39,16 @@ public class SecretCacheConfiguration {
      * This prevents continuous refreshNow() calls by adding a random sleep.
      */
     public static final long DEFAULT_FORCE_REFRESH_JITTER = 100;
+
+    /**
+     * The default timeout for each API call attempt made by a client that the cache
+     * builds, unless the client builder already sets one. The SDK has no attempt
+     * timeout by default, so an endpoint that accepts a connection and never answers
+     * blocks the caller until the HTTP client's own timeouts, if any, give up. A timed
+     * out attempt is retried like any other network error. A client passed in
+     * directly keeps its own timeouts.
+     */
+    public static final Duration DEFAULT_API_CALL_ATTEMPT_TIMEOUT = Duration.ofSeconds(2);
 
     /** The client this cache instance will use for accessing AWS Secrets Manager. */
     private SecretsManagerClient client = null;
