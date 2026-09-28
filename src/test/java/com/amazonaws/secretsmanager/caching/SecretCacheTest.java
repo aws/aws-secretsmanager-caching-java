@@ -13,14 +13,20 @@
 
 package com.amazonaws.secretsmanager.caching;
 
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.function.IntConsumer;
+import java.util.stream.Collectors;
 
 import org.mockito.ArgumentMatcher;
 import org.mockito.ArgumentMatchers;
@@ -31,7 +37,12 @@ import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.awscore.retry.AwsRetryStrategy;
 import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.core.exception.ApiCallAttemptTimeoutException;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClientBuilder;
 import software.amazon.awssdk.services.secretsmanager.model.DescribeSecretRequest;
@@ -525,5 +536,135 @@ public class SecretCacheTest {
                 System.clearProperty("aws.region");
             }
         }
+    }
+
+    /**
+     * Opens a socket that is never accepted. It completes the TCP handshake but
+     * never answers, like an endpoint that hangs after connecting.
+     */
+    private static ServerSocket hungEndpoint() throws Exception {
+        return new ServerSocket(0, 50, InetAddress.getByName("127.0.0.1"));
+    }
+
+    private static SecretsManagerClientBuilder hungEndpointClientBuilder(ServerSocket hung) {
+        return SecretsManagerClient.builder()
+                .endpointOverride(URI.create("http://127.0.0.1:" + hung.getLocalPort()))
+                .region(Region.US_WEST_2)
+                .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create("akid", "secret")));
+    }
+
+    private static long millisToTimeOut(SecretCache cache) {
+        long start = System.nanoTime();
+        Assert.expectThrows(ApiCallAttemptTimeoutException.class, () -> cache.getSecretString("test"));
+        return TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
+    }
+
+    @Test
+    public void testDefaultApiCallAttemptTimeout() {
+        Assert.assertEquals(SecretCacheConfiguration.DEFAULT_API_CALL_ATTEMPT_TIMEOUT, Duration.ofSeconds(2));
+    }
+
+    @Test
+    public void testBuilderClientTimesOutOnHungEndpoint() throws Exception {
+        try (ServerSocket hung = hungEndpoint();
+             SecretCache cache = new SecretCache(hungEndpointClientBuilder(hung)
+                     .overrideConfiguration(c -> c.retryStrategy(AwsRetryStrategy.doNotRetry())))) {
+            long elapsed = millisToTimeOut(cache);
+            Assert.assertTrue(elapsed >= 2000 && elapsed < 5000, "Took " + elapsed + " ms to give up");
+        }
+    }
+
+    @Test
+    public void testBuilderClientRetriesTimedOutAttempt() throws Exception {
+        try (ServerSocket hung = hungEndpoint();
+             SecretCache cache = new SecretCache(hungEndpointClientBuilder(hung)
+                     .overrideConfiguration(c -> c.retryStrategy(
+                             AwsRetryStrategy.standardRetryStrategy().toBuilder().maxAttempts(2).build())))) {
+            // Two 2 second attempts, plus a short backoff between them.
+            long elapsed = millisToTimeOut(cache);
+            Assert.assertTrue(elapsed >= 4000 && elapsed < 8000, "Took " + elapsed + " ms to give up");
+        }
+    }
+
+    @Test
+    public void testBuilderKeepsOwnAttemptTimeout() throws Exception {
+        try (ServerSocket hung = hungEndpoint();
+             SecretCache cache = new SecretCache(hungEndpointClientBuilder(hung)
+                     .overrideConfiguration(c -> c.retryStrategy(AwsRetryStrategy.doNotRetry())
+                             .apiCallAttemptTimeout(Duration.ofMillis(200))))) {
+            long elapsed = millisToTimeOut(cache);
+            Assert.assertTrue(elapsed < 2000,
+                    "Took " + elapsed + " ms to give up, so the builder's own timeout was replaced");
+        }
+    }
+
+    @Test
+    public void testDefaultClientTimesOutOnHungEndpoint() throws Exception {
+        String[] names = {"aws.region", "aws.endpointUrl", "aws.accessKeyId", "aws.secretAccessKey", "aws.maxAttempts"};
+        Map<String, String> original = new HashMap<>();
+        for (String name : names) {
+            original.put(name, System.getProperty(name));
+        }
+        try (ServerSocket hung = hungEndpoint()) {
+            System.setProperty("aws.region", "us-west-2");
+            System.setProperty("aws.endpointUrl", "http://127.0.0.1:" + hung.getLocalPort());
+            System.setProperty("aws.accessKeyId", "akid");
+            System.setProperty("aws.secretAccessKey", "secret");
+            System.setProperty("aws.maxAttempts", "1");
+            try (SecretCache cache = new SecretCache(new SecretCacheConfiguration())) {
+                long elapsed = millisToTimeOut(cache);
+                Assert.assertTrue(elapsed >= 2000 && elapsed < 5000, "Took " + elapsed + " ms to give up");
+            }
+        } finally {
+            for (String name : names) {
+                if (original.get(name) != null) {
+                    System.setProperty(name, original.get(name));
+                } else {
+                    System.clearProperty(name);
+                }
+            }
+        }
+    }
+
+    private static List<Thread> threadsNamed(String prefix) {
+        return Thread.getAllStackTraces().keySet().stream()
+                .filter(t -> t.getName().startsWith(prefix))
+                .collect(Collectors.toList());
+    }
+
+    @Test
+    public void testCachesShareOneTimeoutExecutor() throws Exception {
+        // Each client would otherwise start its own SDK timer threads, which stay
+        // alive because the cache doesn't close its client. That includes a builder
+        // that sets its own timeout.
+        int sdkThreadsBefore = threadsNamed("sdk-ScheduledExecutor").size();
+        try (ServerSocket hung = hungEndpoint()) {
+            for (int i = 0; i < 3; i++) {
+                try (SecretCache cache = new SecretCache(hungEndpointClientBuilder(hung)
+                        .overrideConfiguration(c -> c.retryStrategy(AwsRetryStrategy.doNotRetry())));
+                     SecretCache ownTimeout = new SecretCache(hungEndpointClientBuilder(hung)
+                        .overrideConfiguration(c -> c.retryStrategy(AwsRetryStrategy.doNotRetry())
+                                .apiCallAttemptTimeout(Duration.ofMillis(200))))) {
+                    millisToTimeOut(cache);
+                    millisToTimeOut(ownTimeout);
+                }
+            }
+        }
+        Assert.assertEquals(threadsNamed("sdk-ScheduledExecutor").size(), sdkThreadsBefore);
+
+        List<Thread> cacheThreads = threadsNamed("aws-secretsmanager-caching-timeout");
+        Assert.assertEquals(cacheThreads.size(), 1);
+        Assert.assertTrue(cacheThreads.get(0).isDaemon());
+        Assert.assertSame(cacheThreads.get(0).getContextClassLoader(), SecretCache.class.getClassLoader());
+    }
+
+    @Test
+    public void testCacheStillWorksAfterClose() {
+        Mockito.when(asm.describeSecret(Mockito.any(DescribeSecretRequest.class))).thenReturn(describeSecretResponse);
+        Mockito.when(describeSecretResponse.versionIdsToStages()).thenReturn(null);
+        SecretCache cache = new SecretCache(asm);
+        cache.close();
+        Assert.assertNull(cache.getSecretString("test"));
+        Mockito.verify(asm, Mockito.never()).close();
     }
 }

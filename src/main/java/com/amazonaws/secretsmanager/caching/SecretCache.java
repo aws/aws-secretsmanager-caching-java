@@ -13,6 +13,9 @@
 package com.amazonaws.secretsmanager.caching;
 
 import java.nio.ByteBuffer;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import com.amazonaws.secretsmanager.caching.cache.LRUCache;
 import com.amazonaws.secretsmanager.caching.cache.SecretCacheItem;
@@ -56,8 +59,17 @@ public class SecretCache implements AutoCloseable {
     private final SecretsManagerClient client;
 
     /**
+     * Runs the API call attempt timeouts of every client the cache builds, unless its
+     * builder sets its own executor. Without it, each client would start its own pool
+     * of SDK timer threads, which only stop when the client is closed, and the cache
+     * does not close its client. The SDK never shuts down an executor it is given.
+     */
+    private static final ScheduledExecutorService TIMEOUT_EXECUTOR = timeoutExecutor();
+
+    /**
      * Constructs a new secret cache using the standard AWS Secrets Manager client
-     * with default options.
+     * with default options, and
+     * {@link SecretCacheConfiguration#DEFAULT_API_CALL_ATTEMPT_TIMEOUT}.
      */
     public SecretCache() {
         this(SecretsManagerClient.builder());
@@ -66,7 +78,12 @@ public class SecretCache implements AutoCloseable {
     /**
      * Constructs a new secret cache using an AWS Secrets Manager client created
      * using the
-     * provided builder.
+     * provided builder. Unless the builder sets its own API call attempt timeout,
+     * {@link SecretCacheConfiguration#DEFAULT_API_CALL_ATTEMPT_TIMEOUT} is used. The
+     * timeout, user agent and, unless the builder sets its own scheduled executor, the
+     * cache's shared timeout executor are written into the builder itself, so other
+     * clients later built from it get them too. Do not shut that executor down; every
+     * cache uses it.
      *
      * @param builder The builder to use for creating the AWS Secrets Manager
      *                client.
@@ -75,10 +92,7 @@ public class SecretCache implements AutoCloseable {
         justification = "Delegates to constructor that validates before field initialization")
     public SecretCache(SecretsManagerClientBuilder builder) {
         this(new SecretCacheConfiguration().withClient(builder
-                .overrideConfiguration(
-                        builder.overrideConfiguration().toBuilder()
-                                .putAdvancedOption(SdkAdvancedClientOption.USER_AGENT_SUFFIX, VersionInfo.USER_AGENT)
-                                .build())
+                .overrideConfiguration(withCacheDefaults(builder.overrideConfiguration()))
                 .build()));
     }
 
@@ -95,7 +109,9 @@ public class SecretCache implements AutoCloseable {
     }
 
     /**
-     * Constructs a new secret cache using the provided cache configuration.
+     * Constructs a new secret cache using the provided cache configuration. If the
+     * configuration has no client, the cache builds one with
+     * {@link SecretCacheConfiguration#DEFAULT_API_CALL_ATTEMPT_TIMEOUT}.
      *
      * @param config The secret cache configuration.
      * @throws IllegalArgumentException if both a custom client and postQuantumTlsEnabled 
@@ -116,9 +132,6 @@ public class SecretCache implements AutoCloseable {
 
         this.cache = new LRUCache<String, SecretCacheItem>(config.getMaxCacheSize());
         this.config = config;
-        ClientOverrideConfiguration defaultOverride = ClientOverrideConfiguration.builder()
-                .putAdvancedOption(SdkAdvancedClientOption.USER_AGENT_SUFFIX, VersionInfo.USER_AGENT).build();
-
         if (config.getClient() != null) {
             this.client = config.getClient();
         } else {
@@ -130,8 +143,53 @@ public class SecretCache implements AutoCloseable {
                     .build());
             }
         
-            this.client = builder.overrideConfiguration(defaultOverride).build();
+            this.client = builder.overrideConfiguration(
+                    withCacheDefaults(ClientOverrideConfiguration.builder().build())).build();
         }
+    }
+
+    /**
+     * Adds the cache's user agent suffix to the given override configuration and,
+     * unless it already sets them, the default API call attempt timeout and the
+     * cache's shared timeout executor.
+     *
+     * @param override The override configuration of the client being built.
+     * @return The override configuration to build the client with.
+     */
+    private static ClientOverrideConfiguration withCacheDefaults(ClientOverrideConfiguration override) {
+        ClientOverrideConfiguration.Builder builder = override.toBuilder()
+                .putAdvancedOption(SdkAdvancedClientOption.USER_AGENT_SUFFIX, VersionInfo.USER_AGENT);
+        if (!override.apiCallAttemptTimeout().isPresent()) {
+            builder.apiCallAttemptTimeout(SecretCacheConfiguration.DEFAULT_API_CALL_ATTEMPT_TIMEOUT);
+        }
+        if (!override.scheduledExecutorService().isPresent()) {
+            builder.scheduledExecutorService(TIMEOUT_EXECUTOR);
+        }
+        return builder.build();
+    }
+
+    /**
+     * Creates the shared timeout executor. Its one daemon thread is started by the
+     * first timed request and exits after a minute with nothing to do, so an
+     * application server can unload the application. Cancelled timeouts are removed
+     * straight away.
+     *
+     * @return The shared timeout executor.
+     */
+    private static ScheduledExecutorService timeoutExecutor() {
+        ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1, runnable -> {
+            Thread thread = new Thread(runnable, "aws-secretsmanager-caching-timeout");
+            thread.setDaemon(true);
+            // Don't keep the class loader of whichever application thread happened to start it.
+            thread.setContextClassLoader(SecretCache.class.getClassLoader());
+            return thread;
+        });
+        executor.setRemoveOnCancelPolicy(true);
+        // The keep-alive must be set first: it is 0 by default on Java 8, which
+        // allowCoreThreadTimeOut rejects.
+        executor.setKeepAliveTime(1, TimeUnit.MINUTES);
+        executor.allowCoreThreadTimeOut(true);
+        return executor;
     }
 
     /**

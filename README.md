@@ -106,6 +106,21 @@ String secret = cache.getSecretString("my-secret-id");
 
 **NOTE**: PQ-TLS uses the AWS Common Runtime (CRT) which relies on system libraries and may not work as expected on macOS or Windows at this time ([ref](https://github.com/awslabs/aws-crt-java#tls-behavior)).
 
+### Request Timeouts
+
+When the cache builds the Secrets Manager client, each API call attempt times out after `SecretCacheConfiguration.DEFAULT_API_CALL_ATTEMPT_TIMEOUT` (2 seconds). That covers `new SecretCache()`, a `SecretCacheConfiguration` with no client (including the Post-Quantum TLS example above), and a `SecretsManagerClientBuilder` you pass in. The SDK sets no attempt timeout by default, so without this an endpoint that stops answering can block the call for a long time. A timed out attempt is retried like any other network error.
+
+To use a different value, pass in a builder that sets `apiCallAttemptTimeout`; the cache keeps your value. The SDK has no setting that turns the timeout off, so use a large value if you expect slow calls, or pass in a built client. Only `apiCallAttemptTimeout` counts: a builder that sets just `apiCallTimeout` or HTTP client timeouts still gets the 2 second attempt timeout.
+
+If you pass in a built `SecretsManagerClient`, the cache uses it unchanged, so set the timeout yourself:
+
+```java
+SecretsManagerClient client = SecretsManagerClient.builder()
+    .overrideConfiguration(c -> c.apiCallAttemptTimeout(Duration.ofSeconds(2)))
+    .build();
+SecretCache cache = new SecretCache(client);
+```
+
 ## License
 
 This library is licensed under the Apache 2.0 License. 
