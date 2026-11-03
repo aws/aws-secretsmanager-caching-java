@@ -32,9 +32,11 @@ import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClientBuilder;
 import software.amazon.awssdk.services.secretsmanager.model.DescribeSecretRequest;
@@ -567,5 +569,23 @@ public class SecretCacheTest {
         String suffix = captor.getValue().advancedOption(SdkAdvancedClientOption.USER_AGENT_SUFFIX).orElse(null);
 
         Assert.assertEquals(suffix, VersionInfo.USER_AGENT);
+    }
+
+    @Test
+    public void builderReusedForSeveralCachesAddsIdentifierOnce() {
+        // A real builder keeps state, so reusing it shows whether the suffix grows.
+        SecretsManagerClientBuilder builder = SecretsManagerClient.builder()
+                .region(Region.US_WEST_2)
+                .credentialsProvider(AnonymousCredentialsProvider.create())
+                .overrideConfiguration(ClientOverrideConfiguration.builder()
+                        .putAdvancedOption(SdkAdvancedClientOption.USER_AGENT_SUFFIX, "MyApp/9.9").build());
+
+        for (int i = 0; i < 3; i++) {
+            new SecretCache(builder).close();
+        }
+
+        String suffix = builder.overrideConfiguration()
+                .advancedOption(SdkAdvancedClientOption.USER_AGENT_SUFFIX).orElse(null);
+        Assert.assertEquals(suffix, "MyApp/9.9 " + VersionInfo.USER_AGENT);
     }
 }

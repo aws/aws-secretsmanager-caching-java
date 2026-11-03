@@ -88,4 +88,11 @@ public class VersionInfoTest {
     public void userAgentSuffixWithBlankCaller() {
         Assert.assertEquals(VersionInfo.userAgentSuffix("   "), VersionInfo.USER_AGENT);
     }
+
+    @Test
+    public void userAgentSuffixKeepsCallerSuffixThatAlreadyHasOwnIdentifier() {
+        String suffix = "MyApp/9.9 " + VersionInfo.USER_AGENT;
+
+        Assert.assertEquals(VersionInfo.userAgentSuffix(suffix), suffix);
+    }
 }

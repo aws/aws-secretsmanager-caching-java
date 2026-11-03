@@ -104,7 +104,10 @@ public final class VersionInfo {
      * Builds the UserAgent suffix for the caching client, preserving any suffix a
      * caller has already configured. When a caller suffix is present, the caching
      * identifier is appended to it ({@code "<caller> AwsSecretCache/<version>"});
-     * otherwise the caching identifier is returned on its own.
+     * otherwise the caching identifier is returned on its own. If the caller suffix
+     * already contains the caching identifier (for example, when the same builder
+     * is reused to create more than one cache), it is returned unchanged so the
+     * identifier is not repeated.
      *
      * @param callerSuffix the caller-provided UserAgent suffix (may be {@code null}
      *                     or blank).
@@ -113,6 +116,9 @@ public final class VersionInfo {
     public static String userAgentSuffix(final String callerSuffix) {
         if (callerSuffix == null || callerSuffix.trim().isEmpty()) {
             return USER_AGENT;
+        }
+        if (callerSuffix.contains(USER_AGENT)) {
+            return callerSuffix;
         }
         return callerSuffix + " " + USER_AGENT;
     }
