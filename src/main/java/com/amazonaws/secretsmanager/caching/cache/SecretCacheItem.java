@@ -13,6 +13,8 @@
 
 package com.amazonaws.secretsmanager.caching.cache;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
@@ -115,16 +117,32 @@ public class SecretCacheItem extends SecretCacheObject<DescribeSecretResponse> {
      *            The result of the Describe Secret request to AWS Secrets Manager.
      * @return The cached secret version.
      */
-    private SecretCacheVersion getVersion(DescribeSecretResponse describeResponse) {
+    private SecretCacheVersion getVersion(DescribeSecretResponse describeResponse, String versionId, String versionStage) {
         if (null == describeResponse) { return null; }
         if (null == describeResponse.versionIdsToStages()) { return null; }
-        Optional<String> currentVersionId = describeResponse.versionIdsToStages().entrySet()
-                .stream()
-                .filter(Objects::nonNull)
-                .filter(x -> x.getValue() != null)
-                .filter(x -> x.getValue().contains(this.config.getVersionStage()))
-                .map(x -> x.getKey())
-                .findFirst();
+
+        Optional<String> currentVersionId = Optional.empty();
+
+        for (Map.Entry<String, List<String>> entry : describeResponse.versionIdsToStages().entrySet()) {
+            if (entry == null) {
+                continue;
+            }
+
+            if (entry.getValue() == null) {
+                continue;
+            }
+
+            if (versionId != null && versionId.equals(entry.getKey())) {
+                currentVersionId = Optional.of(versionId);
+                break;
+            }
+
+            if ((versionStage != null && entry.getValue().contains(versionStage)) || entry.getValue().contains(config.getVersionStage())) {
+                currentVersionId = Optional.of(entry.getKey());
+                break;
+            }
+        }
+
         if (currentVersionId.isPresent()) {
             SecretCacheVersion version = versions.get(currentVersionId.get());
             if (null == version) {
@@ -134,6 +152,7 @@ public class SecretCacheItem extends SecretCacheObject<DescribeSecretResponse> {
             }
             return version;
         }
+
         return null;
     }
 
@@ -146,8 +165,26 @@ public class SecretCacheItem extends SecretCacheObject<DescribeSecretResponse> {
      */
     @Override
     protected GetSecretValueResponse getSecretValue(DescribeSecretResponse describeResponse) {
-        SecretCacheVersion version = getVersion(describeResponse);
-        if (null == version) { return null; }
+        return getSecretValue(describeResponse, null, null);
+    }
+
+    /**
+     * Return the cached GetSecretValue result.
+     *
+     * @param describeResponse the DescribeSecret result.
+     * @param versionId the version ID of the desired secret (optional, can be null).
+     * @param versionStage the version stage of the desired secret (optional, can be null).
+     *
+     * @return The cached GetSecretValue result.
+     */
+    @Override
+    protected GetSecretValueResponse getSecretValue(DescribeSecretResponse describeResponse, String versionId, String versionStage) {
+        SecretCacheVersion version = getVersion(describeResponse, versionId, versionStage);
+
+        if (version == null) {
+            return null;
+        }
+
         return version.getSecretValue();
     }
 
