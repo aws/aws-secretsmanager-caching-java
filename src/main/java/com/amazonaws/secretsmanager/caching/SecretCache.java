@@ -170,9 +170,14 @@ public class SecretCache implements AutoCloseable {
     private SecretCacheItem getCachedSecret(final String secretId) {
         SecretCacheItem secret = this.cache.get(secretId);
         if (null == secret) {
-            this.cache.putIfAbsent(secretId,
-                    new SecretCacheItem(secretId, this.client, this.config));
-            secret = this.cache.get(secretId);
+            secret = new SecretCacheItem(secretId, this.client, this.config);
+            if (!this.cache.putIfAbsent(secretId, secret)) {
+                SecretCacheItem cached = this.cache.get(secretId);
+                if (null != cached) {
+                    secret = cached;
+                }
+            }
+            // Keep an item for this request even if another insertion evicts its mapping.
         }
         return secret;
     }
